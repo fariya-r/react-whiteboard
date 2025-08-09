@@ -128,15 +128,17 @@ app.use('/api/create-teacher', createTeacherRoute);
 app.use('/api', teacherRoutes);
 app.use('/api/teacher', deleteTeacherRoute);
 
-// ✅ Upload endpoint
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+
 app.post('/api/upload-recording', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
 
-  const fileUrl = `http://localhost:${PORT}/recordings/${req.file.filename}`;
+  const fileUrl = `${BASE_URL}/recordings/${req.file.filename}`;
   res.json({ fileUrl });
 });
+
 
 // ✅ List recordings
 app.get('/api/recordings', async (req, res) => {
