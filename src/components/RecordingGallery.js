@@ -4,19 +4,20 @@ import { FaShareAlt, FaTrash, FaCalendarAlt } from 'react-icons/fa';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '../firebase/firebase';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE } from './apiConfig';
 
 import Header from './Header';
 const RecordingGallery = () => {
   const [recordings, setRecordings] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const API_BASE = 'http://localhost:5000/api';
 
   const fetchRecordings = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:5000/api/recordings');
-      setRecordings(res.data);
+
+      const res = await axios.get(`${API_BASE}/recordings`);
+            setRecordings(res.data);
     } catch (error) {
       console.error('⚠️ Failed to fetch recordings:', error);
     } finally {
@@ -28,7 +29,7 @@ const RecordingGallery = () => {
     if (!window.confirm('Are you sure you want to delete this recording?')) return;
 
     try {
-      await axios.post('http://localhost:5000/api/delete-recording', { filename });
+      await axios.post(`${API_BASE}/delete-recording`, { filename });
       alert('✅ Recording deleted');
       fetchRecordings();
     } catch (err) {
@@ -101,11 +102,11 @@ const RecordingGallery = () => {
             >
               {/* Video with poster at #t=10, as requested */}
               <video
-                src={`http://localhost:5000/recordings/${rec.filename}#t=10`}
-                controls
+src={`${API_BASE.replace('/api', '')}/recordings/${rec.filename}#t=10`}
+controls
                 className="w-full h-52 object-cover rounded-xl mb-4 border border-gray-200"
-                poster={`http://localhost:5000/recordings/${rec.filename}#t=10`}
-              />
+                poster={`${API_BASE.replace('/api', '')}/recordings/${rec.filename}#t=10`}
+                />
 
               <div className="flex items-center text-sm text-gray-500 mb-4">
                 <FaCalendarAlt className="mr-2 text-gray-400" />
@@ -114,8 +115,8 @@ const RecordingGallery = () => {
 
               <div className="flex justify-end space-x-2">
   <button
-    onClick={() => handleCopyLink(`http://localhost:5000/recordings/${rec.filename}`)}
-    className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-full transition-colors"
+onClick={() => handleCopyLink(`${API_BASE.replace('/api', '')}/recordings/${rec.filename}`)}
+className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-full transition-colors"
     title="Share Link"
   >
     <FaShareAlt className="h-4 w-4" />

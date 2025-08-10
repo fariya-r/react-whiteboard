@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase/firebase';
+import { API_BASE } from './apiConfig';
+
 import {
   LayoutDashboard,
   ClipboardList,
@@ -18,7 +20,6 @@ const Dashboard = () => {
   const [userProfile, setUserProfile] = useState(null);
   const [teachers, setTeachers] = useState([]);
 
-  const API_BASE = 'http://localhost:5000/api';
 
   const handleLogout = async () => {
     await signOut(auth);

@@ -20,8 +20,9 @@ const RealtimeCollaborationManager = () => {
 
     // Socket Connection
     useEffect(() => {
-        const newSocket = io('http://localhost:5000'); // Use your server port
-        setSocket(newSocket);
+      const SOCKET_SERVER_URL = process.env.REACT_APP_SOCKET_SERVER_URL || 'http://localhost:5000';
+      const newSocket = io(SOCKET_SERVER_URL);
+              setSocket(newSocket);
         return () => newSocket.disconnect();
     }, []);
 

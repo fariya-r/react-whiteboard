@@ -2,8 +2,9 @@ import React, { useRef, useState } from 'react';
 import axios from 'axios';
 import { getAuth } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE } from './apiConfig';
 
-const UPLOAD_URL = 'http://localhost:5000/api/upload-recording';
+const UPLOAD_URL = `${API_BASE}/upload-recording`;
 
 const CanvasRecorder = () => {
   const mediaRecorderRef = useRef(null);

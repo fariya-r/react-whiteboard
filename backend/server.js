@@ -107,7 +107,7 @@ if (!fs.existsSync(recordingsDir)) {
 
 // ✅ Middlewares
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: '*', 
   methods: ['GET', 'POST', 'DELETE'],
   credentials: true
 }));
@@ -128,7 +128,6 @@ app.use('/api/create-teacher', createTeacherRoute);
 app.use('/api', teacherRoutes);
 app.use('/api/teacher', deleteTeacherRoute);
 
-const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
 app.post('/api/upload-recording', upload.single('file'), (req, res) => {
   if (!req.file) {
@@ -166,6 +165,7 @@ if (fs.existsSync(buildPath)) {
 
 
 const PORT = process.env.PORT || 5000;
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
 server.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT} (port ${PORT})`);

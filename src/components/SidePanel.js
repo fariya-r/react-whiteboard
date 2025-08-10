@@ -12,7 +12,7 @@ const SidePanel = ({ onTextExtracted, userId }) => {
   const [selectedFileUrl, setSelectedFileUrl] = useState(null);
   const [selectedFileType, setSelectedFileType] = useState('');
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
-  const baseUrl = 'http://localhost:5000';
+  const baseUrl = process.env.REACT_APP_API_BASE_URL ? process.env.REACT_APP_API_BASE_URL.replace('/api', '') : 'http://localhost:5000';
   const [extractedText, setExtractedText] = useState('');
   // const [text, setText] = useState(''); // This state variable is not used and can be removed
 

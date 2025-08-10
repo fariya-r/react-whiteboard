@@ -9,6 +9,7 @@ import AdminWhiteboards from './AdminWhiteboards';
 import axios from 'axios';
 import ProfileModal from './ProfileModal';
 import Header from './Header'; // Import the new Header component
+import { API_BASE } from './apiConfig';
 
 export default function AdminDashboard() {
   const [showForm, setShowForm] = useState(false);
@@ -19,7 +20,6 @@ export default function AdminDashboard() {
   const [userProfile, setUserProfile] = useState(null);
   const navigate = useNavigate();
 
-  const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
   const ADMIN_EMAIL = 'admin@eboard.com';
 
   const handleLogout = async () => {
@@ -114,7 +114,7 @@ export default function AdminDashboard() {
     if (!confirmDelete) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/teacher/${uid}`);
+      await axios.delete(`${API_BASE}/teacher/${uid}`);
       alert('🗑️ Teacher deleted!');
       fetchTeachers();
     } catch (err) {
