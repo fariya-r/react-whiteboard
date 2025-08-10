@@ -143,6 +143,15 @@ const WhiteboardActivity = () => {
             )
         );
     }, [setStickyNotes]);
+    const handleUpdateStickyNoteSize = useCallback((id, newSize) => {
+        setStickyNotes(prevNotes =>
+            prevNotes.map(note =>
+                note.id === id ? { ...note, width: newSize.width, height: newSize.height } : note
+            )
+        );
+    }, [setStickyNotes]);
+    
+
     const handleUpdateStickyNotePosition = useCallback((id, newPosition) => {
         setStickyNotes(prevNotes => 
             prevNotes.map(note => 
@@ -342,7 +351,8 @@ const WhiteboardActivity = () => {
         note={note}
         onUpdateText={handleUpdateStickyNoteText}
         onUpdatePosition={handleUpdateStickyNotePosition}
-        onDelete={handleDeleteStickyNote} // ✅ Add this line
+        onDelete={handleDeleteStickyNote}
+        onUpdateSize={handleUpdateStickyNoteSize}  // ✅ Add this line
     />
 ))}
 
