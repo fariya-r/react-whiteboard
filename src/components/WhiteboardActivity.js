@@ -41,7 +41,7 @@ const WhiteboardActivity = () => {
     const [scale, setScale] = useState(1);
     const [history, setHistory] = useState([]);
     const [redoStack, setRedoStack] = useState([]);
-
+    const [backgroundColor, setBackgroundColor] = useState('#ffffff');
     const [showRuler, setShowRuler] = useState(false);
     // ✅ ADDED: Ruler state ko wapas add kiya gaya hai, kyunki yeh `useCanvasDrawing` mein nahi hai.
     const [rulerPosition, setRulerPosition] = useState({ x: 50, y: 50 });
@@ -75,7 +75,12 @@ const WhiteboardActivity = () => {
         return () => unsubscribe();
     }, [auth]);
   
-    
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (canvas) {
+          canvas.style.backgroundColor = backgroundColor;
+        }
+      }, [backgroundColor]); 
     const {
         tool, setTool,
         color, setColor,
@@ -143,15 +148,6 @@ const WhiteboardActivity = () => {
             )
         );
     }, [setStickyNotes]);
-    const handleUpdateStickyNoteSize = useCallback((id, newSize) => {
-        setStickyNotes(prevNotes =>
-            prevNotes.map(note =>
-                note.id === id ? { ...note, width: newSize.width, height: newSize.height } : note
-            )
-        );
-    }, [setStickyNotes]);
-    
-
     const handleUpdateStickyNotePosition = useCallback((id, newPosition) => {
         setStickyNotes(prevNotes => 
             prevNotes.map(note => 
@@ -242,6 +238,12 @@ const WhiteboardActivity = () => {
             } else {
                 setExtractedTextState("");
             }
+            if (boardToLoad.backgroundColor) {
+                setBackgroundColor(boardToLoad.backgroundColor);
+            } else {
+                // Default color agar save nahi hua ho
+                setBackgroundColor('#ffffff');
+            }
             setCurrentBoardId(boardToLoad.id);
             setSelectedBoardId(boardToLoad.id);
             setBackgroundSnapshot(boardToLoad.snapshot);
@@ -250,7 +252,7 @@ const WhiteboardActivity = () => {
         img.onerror = (e) => {
             console.error("Error loading board snapshot image in loadBoard:", e);
         };
-    }, [canvasRef, contextRef, setTextBoxes, setCircles, setExtractedTextState, setCurrentBoardId, setSelectedBoardId, setBackgroundSnapshot, setShowSavedBoards, setStickyNotes]); // ✅ UPDATED DEPENDENCY ARRAY
+    }, [canvasRef, contextRef, setTextBoxes, setCircles, setExtractedTextState, setCurrentBoardId, setSelectedBoardId, setBackgroundSnapshot, setShowSavedBoards, setStickyNotes,setBackgroundColor]); // ✅ UPDATED DEPENDENCY ARRAY
 
 
     useEffect(() => {
@@ -298,11 +300,12 @@ const WhiteboardActivity = () => {
             // Pass the state variables to the function.
             // Assuming you have access to `textBoxes` and `stickyNotes` here.
             const dataUrl = await getSnapshotWithElements(textBoxes, stickyNotes);
-    
+            const currentBackgroundColor = canvas.style.backgroundColor;
+
             if (currentBoardId) {
-                await updateWhiteboard(currentBoardId, dataUrl, tool, color, lineWidth, textBoxes, circles, fileUrls, extractedTextState, stickyNotes);
+                await updateWhiteboard(currentBoardId, dataUrl, tool, color, lineWidth, textBoxes, circles, fileUrls, extractedTextState, stickyNotes, currentBackgroundColor);
             } else {
-                const newId = await saveWhiteboard(dataUrl, tool, color, lineWidth, textBoxes, circles, fileUrls, extractedTextState, stickyNotes);
+                const newId = await saveWhiteboard(dataUrl, tool, color, lineWidth, textBoxes, circles, fileUrls, extractedTextState, stickyNotes,currentBackgroundColor);
                 setCurrentBoardId(newId);
             }
         }, 100);
@@ -351,8 +354,7 @@ const WhiteboardActivity = () => {
         note={note}
         onUpdateText={handleUpdateStickyNoteText}
         onUpdatePosition={handleUpdateStickyNotePosition}
-        onDelete={handleDeleteStickyNote}
-        onUpdateSize={handleUpdateStickyNoteSize}  // ✅ Add this line
+        onDelete={handleDeleteStickyNote} // ✅ Add this line
     />
 ))}
 
@@ -477,6 +479,8 @@ const WhiteboardActivity = () => {
                 canvasRef={canvasRef}
                 setActiveTextBox={setActiveTextBox}
                 handleReset={handleReset}
+                backgroundColor={backgroundColor}
+        setBackgroundColor={setBackgroundColor}
             />
         </div>
     );

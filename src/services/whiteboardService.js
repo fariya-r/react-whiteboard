@@ -21,7 +21,7 @@ import { db } from '../firebase/firebase';
 import { getAuth } from 'firebase/auth';
 
 // Save a new whiteboard (including textBoxes)
-export const saveWhiteboard = async (dataUrl, tool, color, lineWidth, textBoxes, circles, fileUrls, ocrText, stickyNotes) => {
+export const saveWhiteboard = async (dataUrl, tool, color, lineWidth, textBoxes, circles, fileUrls, ocrText, stickyNotes,backgroundColor) => {
   const auth = getAuth();
   const user = auth.currentUser;
   if (!user) throw new Error('User not logged in');
@@ -39,6 +39,7 @@ export const saveWhiteboard = async (dataUrl, tool, color, lineWidth, textBoxes,
       stickyNotes,      // ✅ Now saving stickyNotes
       createdAt: serverTimestamp(),
       createdByUid: user.uid,
+      backgroundColor,
       createdByName: user.displayName || 'Unknown',
       createdByEmail: user.email || '',
   });
@@ -65,7 +66,7 @@ export const getWhiteboards = async (isAdminView = false, teacherUid = null) => 
 
 
 
-export const updateWhiteboard = async (id, dataUrl, tool, color, lineWidth, textBoxes, circles, fileUrls, ocrText, stickyNotes) => {
+export const updateWhiteboard = async (id, dataUrl, tool, color, lineWidth, textBoxes, circles, fileUrls, ocrText, stickyNotes,backgroundColor) => {
   const auth = getAuth();
   const user = auth.currentUser;
   if (!user) throw new Error('User not logged in');
@@ -80,7 +81,8 @@ export const updateWhiteboard = async (id, dataUrl, tool, color, lineWidth, text
       circles,          // ✅ Now updating circles
       files: fileUrls,
       ocrText,
-      stickyNotes,      // ✅ Now updating stickyNotes
+      stickyNotes, 
+      backgroundColor,     // ✅ Now updating stickyNotes
       createdAt: new Date(),
   });
 };

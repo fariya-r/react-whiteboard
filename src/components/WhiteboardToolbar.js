@@ -1,5 +1,3 @@
-// src/components/WhiteboardToolbar.js (Updated)
-
 import React, { useState } from 'react';
 import {
   FaPencilAlt,
@@ -10,17 +8,14 @@ import {
   FaMinus,
   FaFileMedical,
   FaTextHeight,
-  FaSquare, // Icon for Rectangle
-  FaCircle, // Icon for Circle
-  FaStickyNote, // Icon for Sticky Note
-  FaShapes, // A general icon for the shapes menu
-  FaArrowRight, // Icon for Arrow
-  FaSlash, // A general icon for the Line tool, or a custom one
-  FaRulerCombined, // Icon for Measurement Tools
-  FaRuler,
-  FaCompass,
+  FaSquare,
+  FaCircle,
+  FaStickyNote,
+  FaShapes,
+  FaArrowRight,
+  FaSlash,
+  FaRulerCombined,
 } from 'react-icons/fa';
-
 import ShareButton from './ShareButton';
 import CanvasRecorder from './CanvasRecorder';
 import MeasurementToolsMenu from './MeasurementToolsMenu';
@@ -28,14 +23,15 @@ import MeasurementToolsMenu from './MeasurementToolsMenu';
 const WhiteboardToolbar = ({
   tool, setTool, color, setColor, lineWidth, setLineWidth, history, redoStack,
   handleUndo, handleRedo, togglePanel, handleZoom, handleNewWhiteboard, sessionId,
-  setShowRuler, handleSave, fetchSavedBoards, canvasRef, setActiveTextBox, handleReset
+  setShowRuler, handleSave, fetchSavedBoards, canvasRef, setActiveTextBox, handleReset,
+  // Add new props for background color
+  backgroundColor, setBackgroundColor 
 }) => {
   const [isShapesMenuOpen, setIsShapesMenuOpen] = useState(false);
 
-  // A function to handle the click on a shape button inside the menu
   const handleShapeClick = (shapeTool) => {
     setTool(shapeTool);
-    setIsShapesMenuOpen(false); // Close the menu after a tool is selected
+    setIsShapesMenuOpen(false);
   };
   
   return (
@@ -47,10 +43,9 @@ const WhiteboardToolbar = ({
         <FaEraser />
       </button>
 
-      {/* --- Shape Tools Menu (State-based) --- */}
       <div className="relative">
         <button
-          onClick={() => setIsShapesMenuOpen(prev => !prev)} // Toggle the menu on click
+          onClick={() => setIsShapesMenuOpen(prev => !prev)}
           className={`btn ${isShapesMenuOpen || ['rectangle', 'circle', 'line', 'arrow'].includes(tool) ? 'bg-blue-200' : ''}`}
           title="Shapes"
         >
@@ -74,7 +69,6 @@ const WhiteboardToolbar = ({
         )}
       </div>
 
-      {/* --- Sticky Note Tool --- */}
       <button onClick={() => setTool('stickyNote')} title="Sticky Note" className={`btn ${tool === 'stickyNote' ? 'bg-blue-200' : ''}`}>
         <FaStickyNote />
       </button>
@@ -130,6 +124,17 @@ const WhiteboardToolbar = ({
       >
         <FaTextHeight />
       </button>
+      <label htmlFor="bg-color-picker" className="flex items-center space-x-2 cursor-pointer">
+        <span>🎨 BG Color</span>
+        <input 
+          id="bg-color-picker"
+          type="color" 
+          value={backgroundColor} 
+          onChange={e => setBackgroundColor(e.target.value)} 
+          title="Select Background Color" 
+          className="w-8 h-8 cursor-pointer"
+        />
+      </label>
       <button onClick={handleReset} className="bg-red-500 text-white px-3 py-1 rounded">Reset</button>
     </div>
   );
