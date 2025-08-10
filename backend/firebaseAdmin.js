@@ -3,15 +3,22 @@ const path = require('path');
 
 let serviceAccount;
 
-if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-  // Railway will provide the JSON string in this env var
-  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-} else {
-  serviceAccount = require(path.join(__dirname, 'serviceAccountKey.json'));
+try {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    // Railway env var se JSON parse karo
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  } else {
+    // Local dev ke liye fallback: local JSON file se load karo
+    serviceAccount = require(path.join(__dirname, 'serviceAccountKey.json'));
+  }
+} catch (error) {
+  process.exit(1); // Agar service account load nahi hua to app band kar do
 }
 
 if (!admin.apps.length) {
-  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
 }
 
 const db = admin.firestore();
