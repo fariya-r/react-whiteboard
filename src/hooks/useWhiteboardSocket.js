@@ -33,11 +33,9 @@ const useWhiteboardSocket = (
       setSocket(newSocket);
       
       newSocket.emit('join-room', sessionId);
-      console.log(`Socket joined room: ${sessionId}`);
 
       return () => {
         newSocket.disconnect();
-        console.log(`Socket disconnected from room: ${sessionId}`);
       };
     }
   }, [sessionId, setSocket]);

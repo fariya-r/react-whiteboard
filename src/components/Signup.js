@@ -32,7 +32,6 @@ export default function Signup() {
         sessionHistory: []
       });
 
-      console.log("✅ Signed up as:", role);
       navigate("/"); // redirect to login
     } catch (error) {
       alert("Signup failed: " + error.message);

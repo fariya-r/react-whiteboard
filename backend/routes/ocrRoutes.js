@@ -31,13 +31,10 @@
 //     if (type !== 'image') {
 //       return res.status(400).json({ message: 'Only image OCR is supported right now.' });
 //     }
-//     console.log("📨 OCR request received with type:", type);
-//     console.log("📨 Base64 data length:", data.length);
     
 //     // ✅ Call Google Vision OCR
 //     try {
 //       const [result] = await client.textDetection({ image: { content: buffer } });
-//       console.log("✅ OCR result:", result);
 //     } catch (err) {
 //       console.error("❌ Error calling Google Vision API:", err);
 //       return res.status(500).json({ message: 'Vision API call failed', error: err.message });

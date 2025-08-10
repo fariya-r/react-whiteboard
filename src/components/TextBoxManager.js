@@ -37,7 +37,6 @@
   
 
 //   handle(text) {
-//     console.log("📦 TextBoxManager: handling extracted text:", text.substring(0, 100) + '...');
   
 //     const textBoxes = this.getTextBoxes();
 //     const font = 'Arial';

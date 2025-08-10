@@ -83,7 +83,6 @@ export const extractTextFromBase64Data = async (base64Data, fileType) => {
     // Perform OCR recognition
     const { data: { text } } = await worker.recognize(ocrInput);
 
-    console.log("✅ OCR Extracted Text:", text);
     return text;
   } catch (error) {
     console.error("❌ OCR Failed:", error); // Log the full error object for debugging

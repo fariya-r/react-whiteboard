@@ -13,7 +13,6 @@ router.get('/teachers', async (req, res) => {
       ...doc.data(),
     }));
 
-    console.log('📥 Teachers fetched from Firestore:', teachers);
     res.json(teachers);
   } catch (err) {
     console.error('❌ Error fetching teachers from Firestore:', err);

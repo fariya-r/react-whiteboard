@@ -115,7 +115,6 @@ const useWhiteboardActions = (
             
             setTextEntries([]);
             setBackgroundSnapshot(null);
-            console.log("Whiteboard reset successfully.");
         }
     }, [contextRef, canvasRef, setHistory, setRedoStack, setScale, setTool, setShowRuler, setActiveTextBox, setTextBoxes, setCircles, setPivotPoint, setCurrentPoint, setIsDrawingCircle, setIsDraggingCompass, setCompassAngle, setCompassPosition, setTextEntries, setBackgroundSnapshot]);
     

@@ -25,7 +25,6 @@ export const getLessonPlans = async (userId) => {
     console.error("❌ No user ID passed to getLessonPlans");
     return [];
   }
-  console.log("Fetching plans for:", userId);
 
   const q = query(
     collection(db, "lessonPlans"),

@@ -300,8 +300,6 @@ const WhiteboardActivity = () => {
     };
 
     const fetchSavedBoards = async () => {
-        console.log('Attempting to fetch boards...');
-        console.log('isAdminView:', isAdminView, 'teacherUid:', teacherUid, 'user.uid:', user?.uid);
         if (showSavedBoards) {
             setShowSavedBoards(false);
             return;

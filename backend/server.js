@@ -38,11 +38,9 @@ const whiteboardStates = {};
 // ✅ Corrected server.js code
 // ✅ Corrected server.js code
 io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
 
   socket.on('join-room', (roomName) => {
     socket.join(roomName);
-    console.log(`User ${socket.id} joined room: ${roomName}`);
     
     // ✅ Check if the room state exists, if not, initialize it
     if (!whiteboardStates[roomName]) {
@@ -79,7 +77,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
   });
 });
 

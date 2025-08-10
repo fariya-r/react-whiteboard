@@ -27,7 +27,6 @@ try {
     // Basic validation: check if it has an apiKey, as an empty object is also JSON.parseable
     if (canvasConfig && canvasConfig.apiKey) {
       firebaseConfigToUse = canvasConfig;
-      console.log("Firebase: Using config from Canvas environment.");
     } else {
       console.warn("Firebase: Canvas __firebase_config is invalid or missing apiKey. Falling back to hardcoded config.");
     }
@@ -49,7 +48,6 @@ if (typeof __initial_auth_token !== 'undefined') {
 }
 
 // Log the final config being used for debugging
-console.log("Firebase: Final config being used:", firebaseConfigToUse);
 
 
 // 3. Initialize Firebase App only once.
@@ -58,7 +56,6 @@ if (!getApps().length) {
   // Ensure we have an API key before initializing to prevent 'invalid-api-key' error
   if (firebaseConfigToUse.apiKey) {
     app = initializeApp(firebaseConfigToUse);
-    console.log("Firebase: App initialized successfully.");
   } else {
     // This case should ideally not be reached if fallbacks are robust
     console.error("Firebase: Initialization skipped. No valid API key found in any configuration.");
@@ -66,7 +63,6 @@ if (!getApps().length) {
   }
 } else {
   app = getApp();
-  console.log("Firebase: App already initialized, reusing existing instance.");
 }
 
 // 4. Initialize Firebase services using the single app instance

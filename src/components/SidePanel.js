@@ -40,7 +40,6 @@ const SidePanel = ({ onTextExtracted, userId }) => {
           'Content-Type': 'multipart/form-data',
         },
       });
-      console.log("✅ File uploaded:", response.data);
       toast.success('File uploaded successfully!');
       setFile(null); // Clear the selected file after upload
       fetchFiles(); // Refresh the file list
@@ -78,7 +77,6 @@ const SidePanel = ({ onTextExtracted, userId }) => {
       const res = await axios.get(`${baseUrl}/api/files`, {
         params: { user_id: userId },
       });
-      console.log("📁 Files fetched:", res.data);
       setFilesList(res.data);
     } catch (error) {
       console.error('❌ Fetch error:', error);
@@ -97,7 +95,6 @@ const SidePanel = ({ onTextExtracted, userId }) => {
     try {
       // Use a new endpoint for saving/updating text associated with the user
       await axios.post(`${baseUrl}/api/extracted-text`, { userId, text: textToSave });
-      console.log("✅ Extracted text saved/updated successfully.");
     } catch (error) {
       console.error('❌ Failed to save text:', error);
       toast.error('Failed to save extracted text.');
@@ -126,7 +123,6 @@ const SidePanel = ({ onTextExtracted, userId }) => {
         setExtractedText(response.data.text);
         // Pass the loaded text to the whiteboard on load
         onTextExtracted(response.data.text);
-        console.log("✅ Extracted text loaded:", response.data.text);
       }
     } catch (error) {
       // It's normal for this to fail if no text has been saved yet, so log as info

@@ -43,7 +43,6 @@ const CanvasRecorder = () => {
           // Optional: Save metadata in Firestore here if needed
           const auth = getAuth();
           const user = auth.currentUser;
-          console.log('Uploaded:', fileUrl, user?.email);
 
           alert('✅ Recording saved!');
         } catch (err) {

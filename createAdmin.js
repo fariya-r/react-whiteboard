@@ -22,6 +22,5 @@ const db = getFirestore();
     role: 'Admin',
   });
 
-  console.log('✅ Admin seeded with UID:', adminUser.uid);
   process.exit();
 })();
