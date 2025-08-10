@@ -166,7 +166,7 @@ if (fs.existsSync(buildPath)) {
 
 
 const PORT = process.env.PORT || 5000;
-// ... later:
+
 server.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT} (port ${PORT})`);
 });
