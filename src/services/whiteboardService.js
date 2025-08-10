@@ -15,6 +15,7 @@ import {
   onSnapshot, setDoc,arrayUnion
 } from 'firebase/firestore';
 import axios from 'axios';
+import { API_BASE } from '../components/apiConfig';
 
 import { db } from '../firebase/firebase';
 import { getAuth } from 'firebase/auth';
@@ -96,7 +97,7 @@ export const uploadFile = async (file, whiteboardId) => {
   formData.append('whiteboardId', whiteboardId); // ✅ now defined
 
   try {
-    const response = await axios.post('http://localhost:5000/api/upload', formData, {
+    const response = await axios.post(`${API_BASE}/upload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

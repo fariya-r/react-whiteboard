@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
+import { API_BASE } from '../components/apiConfig';
 
 const useWhiteboardSocket = (
   sessionId,
@@ -29,7 +30,7 @@ const useWhiteboardSocket = (
   // Effect 2: Connect to the socket and join the room
   useEffect(() => {
     if (sessionId) {
-      const newSocket = io('http://localhost:5000');
+      const newSocket = io(API_BASE.replace('/api', ''));
       setSocket(newSocket);
       
       newSocket.emit('join-room', sessionId);
