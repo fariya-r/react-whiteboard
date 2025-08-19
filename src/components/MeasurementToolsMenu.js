@@ -1,5 +1,3 @@
-// src/components/MeasurementToolsMenu.js
-
 import React, { useState } from 'react';
 import { FaRulerCombined, FaRuler, FaCompass } from 'react-icons/fa';
 
@@ -14,12 +12,12 @@ const MeasurementToolsMenu = ({ tool, setTool, setShowRuler }) => {
   };
 
   const handleCompassClick = () => {
-    // Toggle compass tool
-    setTool(prev => prev === 'compass' ? null : 'compass');
+    // Correctly use the setTool prop to update the state in the parent App component
+    setTool(prevTool => (prevTool === 'compass' ? null : 'compass'));
     setShowRuler(false); // Hide ruler if compass is selected
     setIsMenuOpen(false);
   };
-
+  
   return (
     <div className="relative">
       <button
@@ -34,13 +32,13 @@ const MeasurementToolsMenu = ({ tool, setTool, setShowRuler }) => {
         <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg p-2 flex space-x-2 border border-gray-200">
           <button
             onClick={handleRulerClick}
-            className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'line' && 'bg-blue-200'}`}
+            className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'lined' && 'bg-blue-200'}`}
             title="Ruler"
           >
             <FaRuler />
           </button>
           <button
-            onClick={handleCompassClick}
+            onClick={handleCompassClick} // This button's click handler will now update the state in App
             className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'compass' && 'bg-blue-200'}`}
             title="Compass"
           >

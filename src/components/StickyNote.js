@@ -6,11 +6,11 @@ import { FaTimes } from 'react-icons/fa';
 const MIN_WIDTH = 100;
 const MIN_HEIGHT = 60;
 
-const StickyNote = ({ note, onUpdateText, onUpdatePosition, onUpdateSize, onDelete }) => {
+const StickyNote = React.memo(({ note, onUpdateText, onUpdatePosition, onUpdateSize, onDelete }) => {
   const [isEditing, setIsEditing] = useState(note.text === '');
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
-
+  const textareaRef = useRef(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
@@ -21,10 +21,12 @@ const StickyNote = ({ note, onUpdateText, onUpdatePosition, onUpdateSize, onDele
   });
 
   useEffect(() => {
+    // Sync position from props to internal state
     setTempPosition({ x: note.x, y: note.y });
   }, [note.x, note.y]);
 
   useEffect(() => {
+    // Sync size from props to internal state
     setTempSize({
       width: note.width || 150,
       height: note.height || 100
@@ -46,16 +48,13 @@ const StickyNote = ({ note, onUpdateText, onUpdatePosition, onUpdateSize, onDele
 
   // --- Drag (move) handlers ---
   const handleMouseDown = useCallback((e) => {
-    // Do not start dragging while editing or while resizing
-    if (isEditing || isResizing) return;
+    if (isEditing || isResizing || e.target.dataset.resizable) return;
 
-    // Only start drag when clicking outside the resize handle / controls
     setIsDragging(true);
     dragStartRef.current = {
       x: e.clientX - tempPosition.x,
       y: e.clientY - tempPosition.y
     };
-    // prevent parent handlers from interfering
     e.stopPropagation();
     e.preventDefault();
   }, [isEditing, isResizing, tempPosition.x, tempPosition.y]);
@@ -68,8 +67,8 @@ const StickyNote = ({ note, onUpdateText, onUpdatePosition, onUpdateSize, onDele
     } else if (isResizing) {
       const deltaX = e.clientX - resizeStartRef.current.x;
       const deltaY = e.clientY - resizeStartRef.current.y;
-      let newWidth = Math.max(MIN_WIDTH, resizeStartRef.current.width + deltaX);
-      let newHeight = Math.max(MIN_HEIGHT, resizeStartRef.current.height + deltaY);
+      const newWidth = Math.max(MIN_WIDTH, resizeStartRef.current.width + deltaX);
+      const newHeight = Math.max(MIN_HEIGHT, resizeStartRef.current.height + deltaY);
       setTempSize({ width: newWidth, height: newHeight });
     }
   }, [isDragging, isResizing]);
@@ -87,7 +86,6 @@ const StickyNote = ({ note, onUpdateText, onUpdatePosition, onUpdateSize, onDele
 
   // --- Resize handlers (bottom-right corner) ---
   const handleResizeMouseDown = useCallback((e) => {
-    // prevent the note drag from starting
     e.stopPropagation();
     e.preventDefault();
 
@@ -109,12 +107,20 @@ const StickyNote = ({ note, onUpdateText, onUpdatePosition, onUpdateSize, onDele
     if (isDragging || isResizing) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
+      // Clean up event listeners
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
     }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
   }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
+
+  // Handle auto-focusing the textarea when entering edit mode
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [isEditing]);
 
   return (
     <div
@@ -128,9 +134,8 @@ const StickyNote = ({ note, onUpdateText, onUpdatePosition, onUpdateSize, onDele
         minWidth: `${MIN_WIDTH}px`,
         minHeight: `${MIN_HEIGHT}px`,
         cursor: isEditing ? 'auto' : (isDragging ? 'grabbing' : 'grab'),
-        zIndex: isDragging ? 20 : 10,
+        zIndex: isDragging || isResizing ? 20 : 10,
         boxSizing: 'border-box',
-        position: 'absolute',
         userSelect: isEditing ? 'text' : 'none',
         overflow: 'hidden',
       }}
@@ -147,16 +152,16 @@ const StickyNote = ({ note, onUpdateText, onUpdatePosition, onUpdateSize, onDele
 
       {isEditing ? (
         <textarea
+          ref={textareaRef}
           className="w-full h-full bg-transparent resize-none focus:outline-none"
           value={note.text}
           onChange={handleTextChange}
           onBlur={handleBlur}
-          autoFocus
           style={{
             width: '100%',
             height: '100%',
             boxSizing: 'border-box',
-            paddingRight: '18px' // leave room for resize handle visual
+            paddingRight: '18px'
           }}
         />
       ) : (
@@ -167,6 +172,7 @@ const StickyNote = ({ note, onUpdateText, onUpdatePosition, onUpdateSize, onDele
 
       {/* Resize handle (bottom-right) */}
       <div
+        data-resizable="true"
         onMouseDown={handleResizeMouseDown}
         title="Drag to resize"
         style={{
@@ -178,18 +184,14 @@ const StickyNote = ({ note, onUpdateText, onUpdatePosition, onUpdateSize, onDele
           cursor: 'se-resize',
           zIndex: 30,
           opacity: 0.7,
-          // small visual indicator:
-          background: 'transparent',
-          borderRadius: 2,
         }}
       >
-        {/* Optional small triangle indicator using CSS pseudo-shapes is not possible inline; keep it simple */}
         <svg width="14" height="14" viewBox="0 0 10 10" style={{ display: 'block' }}>
           <path d="M0 10 L10 0 L10 3 L3 10 Z" fill="rgba(0,0,0,0.15)" />
         </svg>
       </div>
     </div>
   );
-};
+});
 
 export default StickyNote;

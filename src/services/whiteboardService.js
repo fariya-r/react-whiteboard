@@ -21,32 +21,44 @@ import { db } from '../firebase/firebase';
 import { getAuth } from 'firebase/auth';
 
 // Save a new whiteboard (including textBoxes)
-export const saveWhiteboard = async (dataUrl, tool, color, lineWidth, textBoxes, circles, fileUrls, ocrText, stickyNotes,backgroundColor) => {
+export const saveWhiteboard = async (
+  dataUrl,
+  tool,
+  color,
+  lineWidth,
+  textBoxes,
+  circles,
+  shapes,
+  fileUrls,
+  ocrText,
+  stickyNotes,
+  backgroundColor
+) => {
   const auth = getAuth();
   const user = auth.currentUser;
-  if (!user) throw new Error('User not logged in');
+  if (!user) throw new Error("User not logged in");
 
-  const docRef = await addDoc(collection(db, 'whiteboards'), {
-      uid: user.uid,
-      snapshot: dataUrl,
-      tool,
-      color,
-      lineWidth,
-      textBoxes,
-      circles,          // ✅ Now saving circles
-      files: fileUrls || [],
-      ocrText,
-      stickyNotes,      // ✅ Now saving stickyNotes
-      createdAt: serverTimestamp(),
-      createdByUid: user.uid,
-      backgroundColor,
-      createdByName: user.displayName || 'Unknown',
-      createdByEmail: user.email || '',
+  const docRef = await addDoc(collection(db, "whiteboards"), {
+    uid: user.uid,
+    snapshot: dataUrl || "",
+    tool: tool || "pencil",
+    color: color || "#000000",
+    lineWidth: lineWidth || 2,
+    textBoxes: textBoxes || [],
+    circles: circles || [],
+    shapes: shapes || [],      // ✅ ensure always an array
+    files: fileUrls || [],
+    ocrText: ocrText || "",
+    stickyNotes: stickyNotes || [],
+    backgroundColor: backgroundColor || "#ffffff",
+    createdAt: serverTimestamp(),
+    createdByUid: user.uid,
+    createdByName: user.displayName || "Unknown",
+    createdByEmail: user.email || "",
   });
 
   return docRef.id;
 };
-
 
 export const getWhiteboards = async (isAdminView = false, teacherUid = null) => {
   const auth = getAuth(); // ✅ FIXED earlier
@@ -66,27 +78,40 @@ export const getWhiteboards = async (isAdminView = false, teacherUid = null) => 
 
 
 
-export const updateWhiteboard = async (id, dataUrl, tool, color, lineWidth, textBoxes, circles, fileUrls, ocrText, stickyNotes,backgroundColor) => {
+export const updateWhiteboard = async (
+  id,
+  dataUrl,
+  tool,
+  color,
+  lineWidth,
+  textBoxes,
+  circles,
+  shapes,
+  fileUrls,
+  ocrText,
+  stickyNotes,
+  backgroundColor
+) => {
   const auth = getAuth();
   const user = auth.currentUser;
-  if (!user) throw new Error('User not logged in');
+  if (!user) throw new Error("User not logged in");
 
-  const docRef = doc(db, 'whiteboards', id);
+  const docRef = doc(db, "whiteboards", id);
   await updateDoc(docRef, {
-      snapshot: dataUrl,
-      tool,
-      color,
-      lineWidth,
-      textBoxes,
-      circles,          // ✅ Now updating circles
-      files: fileUrls,
-      ocrText,
-      stickyNotes, 
-      backgroundColor,     // ✅ Now updating stickyNotes
-      createdAt: new Date(),
+    snapshot: dataUrl || "",
+    tool: tool || "pencil",
+    color: color || "#000000",
+    lineWidth: lineWidth || 2,
+    textBoxes: textBoxes || [],
+    circles: circles || [],
+    shapes: shapes || [],      // ✅ ensure always an array
+    files: fileUrls || [],
+    ocrText: ocrText || "",
+    stickyNotes: stickyNotes || [],
+    backgroundColor: backgroundColor || "#ffffff",
+    updatedAt: new Date(),     // 👈 createdAt ki jagah updatedAt rakho
   });
 };
-
 
 // Delete whiteboard
 export const deleteWhiteboard = async (id) => {

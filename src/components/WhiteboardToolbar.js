@@ -44,30 +44,61 @@ const WhiteboardToolbar = ({
       </button>
 
       <div className="relative">
-        <button
-          onClick={() => setIsShapesMenuOpen(prev => !prev)}
-          className={`btn ${isShapesMenuOpen || ['rectangle', 'circle', 'line', 'arrow'].includes(tool) ? 'bg-blue-200' : ''}`}
-          title="Shapes"
-        >
-          <FaShapes />
-        </button>
-        {isShapesMenuOpen && (
-          <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg p-2 flex space-x-2 border border-gray-200">
-            <button onClick={() => handleShapeClick('rectangle')} title="Rectangle" className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'rectangle' ? 'bg-blue-200' : ''}`}>
-              <FaSquare />
-            </button>
-            <button onClick={() => handleShapeClick('circle')} title="Circle" className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'circle' ? 'bg-blue-200' : ''}`}>
-              <FaCircle />
-            </button>
-            <button onClick={() => handleShapeClick('line')} title="Line" className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'line' ? 'bg-blue-200' : ''}`}>
-              <FaSlash />
-            </button>
-            <button onClick={() => handleShapeClick('arrow')} title="Arrow" className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'arrow' ? 'bg-blue-200' : ''}`}>
-              <FaArrowRight />
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Shapes Menu Toggle Button */}
+      <button
+        onClick={() => setIsShapesMenuOpen(prev => !prev)}
+        className={`btn ${
+          isShapesMenuOpen || ["rectangle", "circle", "line", "arrow"].includes(tool)
+            ? "bg-blue-200"
+            : ""
+        }`}
+        title="Shapes"
+      >
+        <FaShapes />
+      </button>
+
+      {/* Shapes Menu */}
+      {isShapesMenuOpen && (
+        <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg p-2 flex space-x-2 border border-gray-200">
+          <button
+            onClick={() => handleShapeClick("rectangle")}
+            title="Rectangle"
+            className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${
+              tool === "rectangle" ? "bg-blue-200" : ""
+            }`}
+          >
+            <FaSquare />
+          </button>
+          <button
+            onClick={() => handleShapeClick("circle")}
+            title="Circle"
+            className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${
+              tool === "circle" ? "bg-blue-200" : ""
+            }`}
+          >
+            <FaCircle />
+          </button>
+          <button
+            onClick={() => handleShapeClick("line")}
+            title="Line"
+            className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${
+              tool === "line" ? "bg-blue-200" : ""
+            }`}
+          >
+            <FaSlash />
+          </button>
+          <button
+            onClick={() => handleShapeClick("arrow")}
+            title="Arrow"
+            className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${
+              tool === "arrow" ? "bg-blue-200" : ""
+            }`}
+          >
+            <FaArrowRight />
+          </button>
+        </div>
+      )}
+    </div>
 
       <button onClick={() => setTool('stickyNote')} title="Sticky Note" className={`btn ${tool === 'stickyNote' ? 'bg-blue-200' : ''}`}>
         <FaStickyNote />
