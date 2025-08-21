@@ -24,6 +24,7 @@ import useCanvasDrawing from '../hooks/useCanvasDrawing';
 import StickyNote from './StickyNote';
 import useCanvasSnapshot from '../hooks/useCanvasSnapshot';
 import Shape from '../components/Shape';
+import ShapeRenderer from "../components/ShapeRenderer";
 
 const WhiteboardActivity = () => {
     const canvasRef = useRef(null);
@@ -94,18 +95,17 @@ const WhiteboardActivity = () => {
     }, [whiteboardId]);
 
     const handleShapeClick = (selectedShape) => {
-        setTool(selectedShape); // should be 'rectangle', 'circle', 'line', or 'arrow'
+        setTool(selectedShape);
         setIsShapesMenuOpen(false);
     };
 
     const handleCanvasClick = (e) => {
-        if (!['rectangle', 'circle', 'line', 'arrow'].includes(tool)) return;
+        if (!tool) return; // only block if no tool is selected
         if (!canvasRef.current) return;
 
         const rect = canvasRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-
 
         const newShape = {
             id: uuidv4(),
@@ -118,8 +118,10 @@ const WhiteboardActivity = () => {
             text: "",
             rotation: 0, // rotation angle in degrees
         };
+
         setShapes(prev => [...prev, newShape]);
     };
+
 
 
     const updateShape = (updatedShape) => {
@@ -175,6 +177,8 @@ const WhiteboardActivity = () => {
         setDragStartOffset,
         compassAngle,
         setCompassAngle,
+        shapes,      // pass the array
+        setShapes,
         isDrawingCircle,
         setIsDrawingCircle,
         pivotPoint,
@@ -207,7 +211,7 @@ const WhiteboardActivity = () => {
         setActiveTextBox,
         setTextBoxes,
         setCircles,
-        setShapes, 
+        setShapes,
         setPivotPoint,
         setCurrentPoint,
         setIsDrawingCircle,
@@ -377,87 +381,24 @@ const WhiteboardActivity = () => {
         }
     };
 
-    const getWhiteboardSnapshot = () => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext("2d");
-
-        // Clear and set background
-        ctx.fillStyle = backgroundColor || "#fff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // ✅ Redraw shapes
-        shapes.forEach(shape => {
-            ctx.strokeStyle = shape.color;
-            ctx.lineWidth = shape.lineWidth;
-
-            if (shape.type === "rectangle") {
-                ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
-            } else if (shape.type === "circle") {
-                ctx.beginPath();
-                ctx.arc(shape.x, shape.y, shape.radius, 0, Math.PI * 2);
-                ctx.stroke();
-            } else if (shape.type === "line") {
-                ctx.beginPath();
-                ctx.moveTo(shape.x1, shape.y1);
-                ctx.lineTo(shape.x2, shape.y2);
-                ctx.stroke();
-            } else if (shape.type === "arrow") {
-                ctx.beginPath();
-                ctx.moveTo(shape.x1, shape.y1);
-                ctx.lineTo(shape.x2, shape.y2);
-                ctx.stroke();
-                // Arrowhead
-                const angle = Math.atan2(shape.y2 - shape.y1, shape.x2 - shape.x1);
-                ctx.lineTo(
-                    shape.x2 - 10 * Math.cos(angle - Math.PI / 6),
-                    shape.y2 - 10 * Math.sin(angle - Math.PI / 6)
-                );
-                ctx.moveTo(shape.x2, shape.y2);
-                ctx.lineTo(
-                    shape.x2 - 10 * Math.cos(angle + Math.PI / 6),
-                    shape.y2 - 10 * Math.sin(angle + Math.PI / 6)
-                );
-                ctx.stroke();
-            }
-        });
-
-        // ✅ Redraw textBoxes
-        textBoxes.forEach(tb => {
-            ctx.fillStyle = tb.color || "black";
-            ctx.font = `${tb.fontSize || 16}px Arial`;
-            ctx.fillText(tb.text, tb.x, tb.y);
-        });
-
-        // ✅ Redraw stickyNotes
-        stickyNotes.forEach(sn => {
-            ctx.fillStyle = sn.color || "yellow";
-            ctx.fillRect(sn.x, sn.y, sn.width, sn.height);
-            ctx.fillStyle = "black";
-            ctx.fillText(sn.text, sn.x + 5, sn.y + 20);
-        });
-
-        return canvas.toDataURL("image/png");
-    };
-
-
     const handleSave = async () => {
         if (!user) {
             alert('Please log in to save');
             return;
         }
-    
+
         await drawTextBoxesOnCanvas();
-    
+
         setTimeout(async () => {
             const canvas = canvasRef.current;
             const ocrText = extractedTextState || '';
-    
+
             // ✅ Snapshot generate (snapshot + overlay elements)
             const dataUrl = await getSnapshotWithElements(textBoxes, stickyNotes, shapes, circles);
-    
+
             // ✅ Current background color
             const currentBackgroundColor = canvas.style.backgroundColor || "#ffffff";
-    
+
             // ✅ Firestore update or save
             if (currentBoardId) {
                 await updateWhiteboard(
@@ -492,7 +433,7 @@ const WhiteboardActivity = () => {
             }
         }, 100);
     };
-    
+
 
     const fetchSavedBoards = async () => {
         if (showSavedBoards) {
@@ -554,7 +495,7 @@ const WhiteboardActivity = () => {
             )}
 
 
-<div
+            <div
                 style={{
                     width: "100%",
                     height: "100%",
@@ -564,11 +505,7 @@ const WhiteboardActivity = () => {
                 }}
                 onScroll={handleScroll}
             >
-                {/*
-                    The canvas is now only the size of the viewport.
-                    The illusion of "infinity" comes from the camera translation
-                    and drawing everything based on the data model.
-                */}
+
                 <canvas
                     ref={canvasRef}
                     style={{
@@ -582,24 +519,33 @@ const WhiteboardActivity = () => {
                     onMouseUp={finishDrawing}
                     onClick={(e) => {
                         if (tool === "text") handleTextCanvasClick(e);
-                        else if (['rectangle', 'circle', 'line', 'arrow'].includes(tool)) handleCanvasClick(e);
-                    }}
+                        else if (
+                          ['rectangle','circle','line','arrow','triangle','diamond','star','hexagon',
+                           'cylinder','arrow-left','arrow-right','arrow-both','brace-left','brace-right','cloud','plus',
+                           'trapezoid','parallelogram','octagon','speechBubble','hamburger'].includes(tool)
+                        ) {
+                          handleCanvasClick(e);  // now new shapes are included
+                        }
+                      }}
+                      
                     onTouchStart={handleMouseDown}
                     onTouchMove={isDrawing ? drawLine : undefined}
                     onTouchEnd={finishDrawing}
                     className="cursor-crosshair"
                 />
-    
-  {/* Render shapes over canvas */}
-  {shapes.map((shape) => (
-    <Shape
-      key={shape.id}
-      shape={shape}
-      onUpdate={updateShape}
-      onDelete={deleteShape}
-    />
-  ))}
-</div>
+
+                {/* Render shapes over canvas */}
+{shapes.map((shape) => (
+  <Shape
+    key={shape.id}
+    shape={shape}
+    onUpdate={updateShape}
+    onDelete={deleteShape}
+  />
+))}
+
+
+            </div>
 
             {
                 tool === 'compass' && (

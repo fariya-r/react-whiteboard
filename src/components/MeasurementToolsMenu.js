@@ -32,7 +32,7 @@ const MeasurementToolsMenu = ({ tool, setTool, setShowRuler }) => {
         <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg p-2 flex space-x-2 border border-gray-200">
           <button
             onClick={handleRulerClick}
-            className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'lined' && 'bg-blue-200'}`}
+            className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'line' && 'bg-blue-200'}`}
             title="Ruler"
           >
             <FaRuler />

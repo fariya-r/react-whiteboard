@@ -1,11 +1,13 @@
 import React, { useState, useRef } from "react";
 import { Rnd } from "react-rnd";
+import ShapeRenderer from "../components/ShapeRenderer";
+import { shapesConfig } from "../components/shapesConfig";
 
 const Shape = ({ shape, onUpdate, onDelete }) => {
   const [isHovered, setIsHovered] = useState(false);
   const shapeRef = useRef(null);
 
-  // Rotation logic
+  // --- ROTATION ---
   const handleRotateStart = (e) => {
     e.stopPropagation();
     const rect = shapeRef.current.getBoundingClientRect();
@@ -29,27 +31,24 @@ const Shape = ({ shape, onUpdate, onDelete }) => {
     window.addEventListener("mouseup", onMouseUp);
   };
 
-  // Base style
-  let shapeStyle = {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    width: "100%",
-    height: "100%",
-    transform: `rotate(${shape.rotation || 0}deg)`,
-  };
+  // --- RENDER SHAPE USING CONFIG ---
+  const renderShape = () => {
+    const config = shapesConfig[shape.type];
+    if (!config) return <div>{shape.text || ""}</div>;
 
-  if (shape.type === "rectangle") shapeStyle.backgroundColor = shape.color || "#E3ECDD";
-  if (shape.type === "circle") {
-    shapeStyle.backgroundColor = shape.color || "#E3ECDD";
-    shapeStyle.borderRadius = "50%";
-  }
-  if (shape.type === "line") {
-    shapeStyle.backgroundColor =  "black";
-    shapeStyle.height = "2px";
-    shapeStyle.width = "100%";
-  }
+    return (
+      <ShapeRenderer
+        shapeType={shape.type}
+        color={shape.color || "#E3ECDD"}
+        stroke={shape.stroke || "black"}
+        strokeWidth={shape.strokeWidth || 2}
+        width={shape.width}
+        height={shape.height}
+        viewBox={config.viewBox}
+        renderFn={config.render}
+      />
+    );
+  };
 
   return (
     <Rnd
@@ -65,182 +64,67 @@ const Shape = ({ shape, onUpdate, onDelete }) => {
           y: position.y,
         })
       }
-      style={{ zIndex: 10 }}
+      style={{ zIndex: 10, position: "absolute" }}
       cancel=".shape-no-drag"
-      enableResizing={{
-        top: true,
-        right: true,
-        bottom: true,
-        left: true,
-        topRight: true,
-        bottomRight: true,
-        bottomLeft: true,
-        topLeft: true,
-      }}
     >
       <div
         ref={shapeRef}
-        style={{ ...shapeStyle, overflow: "visible" }}
+        style={{
+          width: "100%",
+          height: "100%",
+          transform: `rotate(${shape.rotation || 0}deg)`,
+          position: "relative",
+        }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {shape.text || ""}
+        {renderShape()}
 
-        {/* Arrow shape */}
-        {shape.type === "arrow" && (
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              height: "4px",
-              backgroundColor: shape.color || "black",
-              transform: `rotate(${shape.rotation || 0}deg)`,
-              transformOrigin: "left center",
-            }}
-          >
+        {isHovered && (
+          <>
+            {/* Delete button */}
             <div
+              className="shape-no-drag"
+              onClick={() => onDelete(shape.id)}
               style={{
                 position: "absolute",
-                right: 0,
-                top: "-6px",
-                width: 0,
-                height: 0,
-                borderTop: "8px solid transparent",
-                borderBottom: "8px solid transparent",
-                borderLeft: `12px solid ${shape.color || "black"}`,
+                top: 5,
+                right: 5,
+                width: 20,
+                height: 20,
+                background: "red",
+                color: "white",
+                fontSize: 12,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "50%",
+                cursor: "pointer",
+                zIndex: 20,
+              }}
+            >
+              ✖
+            </div>
+
+            {/* Rotation handle */}
+            <div
+              className="shape-no-drag"
+              onMouseDown={(e) => handleRotateStart(e)}
+              style={{
+                position: "absolute",
+                bottom: 5,
+                right: 5,
+                width: 12,
+                height: 12,
+                background: "blue",
+                borderRadius: "50%",
+                cursor: "grab",
+                zIndex: 20,
               }}
             />
-          </div>
+          </>
         )}
-        
-        {isHovered && shape.type === "line" && (
-  <>
-    {/* delete button */}
-    <button
-      className="shape-no-drag"
-      onClick={() => onDelete(shape.id)}
-      style={{
-        position: "absolute",
-        top: -25,   // line ke upar thoda space
-        right: 0,
-        zIndex: 20,
-      }}
-    >
-      ✖
-    </button>
-
-    {/* rotation dot */}
-    <div
-      className="shape-no-drag"
-      onMouseDown={(e) => {
-        e.stopPropagation();
-        handleRotateStart(e);
-      }}
-      style={{
-        position: "absolute",
-        bottom: -20,  // line ke neeche dot
-        right: "50%",
-        transform: "translateX(50%)",
-        width: 12,
-        height: 12,
-        borderRadius: "50%",
-        backgroundColor: "blue",
-        cursor: "grab",
-        zIndex: 20,
-        pointerEvents: "auto",
-      }}
-    />
-  </>
-)}
-
-
-            {isHovered && shape.type === "circle" && (
-              <>
-                {/* delete button */}
-                <div
-                  className="shape-no-drag"
-                  onClick={() => onDelete(shape.id)}
-                  style={{
-                    position: "absolute",
-                    top: "15%",
-                    right: "15%",
-                    width: "18px",
-                    height: "18px",
-                    background: "red",
-                    color: "white",
-                    fontSize: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: "50%",
-                    cursor: "pointer",
-                    zIndex: 20,
-                    pointerEvents: "auto",
-                  }}
-                >
-                  ✖
-                </div>
-
-                {/* rotation dot */}
-                <div
-                  className="shape-no-drag"
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                    handleRotateStart(e);
-                  }}
-                  style={{
-                    position: "absolute",
-                    bottom: "15%",
-                    right: "15%",
-                    width: "12px",
-                    height: "12px",
-                    background: "blue",
-                    borderRadius: "50%",
-                    cursor: "grab",
-                    zIndex: 20,
-                    pointerEvents: "auto",
-                  }}
-                />
-              </>
-            )}
-
-            {/* Other shapes → show buttons only on hover */}
-            {isHovered && shape.type !== "circle" && (
-              <>
-                <button
-                  className="shape-no-drag"
-                  onClick={() => onDelete(shape.id)}
-                  style={{
-                    position: "absolute",
-                    top: 5,
-                    right: 5,
-                    zIndex: 20,
-                  }}
-                >
-                  x
-                </button>
-                <div
-                  className="shape-no-drag"
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                    handleRotateStart(e);
-                  }}
-                  style={{
-                    position: "absolute",
-                    bottom: 5,
-                    right: 5,
-                    width: 12,
-                    height: 12,
-                    borderRadius: "50%",
-                    backgroundColor: "red",
-                    cursor: "grab",
-                    zIndex: 20,
-                    pointerEvents: "auto",
-                  }}
-                />
-              </>
-            )}
-          </div>
+      </div>
     </Rnd>
   );
 };

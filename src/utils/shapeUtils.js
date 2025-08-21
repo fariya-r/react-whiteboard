@@ -1,239 +1,266 @@
-// src/utils/shapeUtils.js
+// // src/utils/shapeUtils.js
 
- 
+// export function drawShape(ctx, shape) {
+//     ctx.strokeStyle = shape.color;
+//     ctx.lineWidth = shape.lineWidth;
+//     ctx.beginPath();
 
-// ================== Draw Any Shape from State ==================
-export function drawShape(ctx, shape) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.strokeStyle = shape.color || '#000';
-    ctx.lineWidth = shape.lineWidth || 2;
+//     switch (shape.type) {
+//         case "line":
+//             ctx.moveTo(shape.x, shape.y);
+//             ctx.lineTo(shape.x2, shape.y2);
+//             break;
 
-    if (shape.type === 'rectangle') {
-        const x = Math.min(shape.startX, shape.endX);
-        const y = Math.min(shape.startY, shape.endY);
-        const width = Math.abs(shape.endX - shape.startX);
-        const height = Math.abs(shape.endY - shape.startY);
-        ctx.strokeRect(x, y, width, height);
-    } else if (shape.type === 'circle') {
-        const dx = shape.endX - shape.startX;
-        const dy = shape.endY - shape.startY;
-        const radius = Math.sqrt(dx * dx + dy * dy);
-        ctx.arc(shape.startX, shape.startY, radius, 0, Math.PI * 2);
-        ctx.stroke();
-    } else if (shape.type === 'line' || shape.type === 'arrow') {
-        ctx.moveTo(shape.startX, shape.startY);
-        ctx.lineTo(shape.endX, shape.endY);
-        ctx.stroke();
-        if (shape.type === 'arrow') {
-            drawArrowhead(ctx, { x: shape.startX, y: shape.startY }, { x: shape.endX, y: shape.endY });
-        }
-    }
+//         case "rectangle":
+//             ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
+//             break;
 
-    ctx.closePath();
-    ctx.restore();
-}
-export const drawArrowhead = (ctx, from, to) => {
-    const headlen = 10;
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
-    const angle = Math.atan2(dy, dx);
-    ctx.beginPath();
-    ctx.moveTo(to.x, to.y);
-    ctx.lineTo(
-      to.x - headlen * Math.cos(angle - Math.PI / 6),
-      to.y - headlen * Math.sin(angle - Math.PI / 6)
-    );
-    ctx.moveTo(to.x, to.y);
-    ctx.lineTo(
-      to.x - headlen * Math.cos(angle + Math.PI / 6),
-      to.y - headlen * Math.sin(angle + Math.PI / 6)
-    );
-    ctx.stroke();
-    ctx.closePath();
-  };
-export const isPointInShape = (shape, x, y) => {
-    const { type, startX, startY, endX, endY } = shape;
-    if (type === 'rectangle') {
-        return (
-            x >= Math.min(startX, endX) &&
-            x <= Math.max(startX, endX) &&
-            y >= Math.min(startY, endY) &&
-            y <= Math.max(startY, endY)
-        );
-    }
-    if (type === 'circle') {
-        const dx = x - startX;
-        const dy = y - startY;
-        const radius = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
-        return Math.sqrt(dx * dx + dy * dy) <= radius;
-    }
-    if (type === 'line' || type === 'arrow') {
-        return isNearLine(startX, startY, endX, endY, x, y);
-    }
-    return false;
-};
+//         case "circle":
+//             ctx.arc(
+//                 shape.x + shape.width / 2,
+//                 shape.y + shape.height / 2,
+//                 Math.min(Math.abs(shape.width), Math.abs(shape.height)) / 2,
+//                 0,
+//                 Math.PI * 2
+//             );
+//             break;
 
-const isNearLine = (x1, y1, x2, y2, px, py, tolerance = 5) => {
-    const A = px - x1;
-    const B = py - y1;
-    const C = x2 - x1;
-    const D = y2 - y1;
+//             case "arrow-right":
+//                 drawArrow(
+//                   ctx,
+//                   shape.x,
+//                   shape.y + shape.height / 2,
+//                   shape.x + shape.width,
+//                   shape.y + shape.height / 2,
+//                   false,
+//                   shape.color,
+//                   shape.lineWidth
+//                 );
+//                 break;
+              
+//               case "arrow-left":
+//                 drawArrow(
+//                   ctx,
+//                   shape.x + shape.width,
+//                   shape.y + shape.height / 2,
+//                   shape.x,
+//                   shape.y + shape.height / 2,
+//                   false,
+//                   shape.color,
+//                   shape.lineWidth
+//                 );
+//                 break;
+              
+//               case "arrow-both":
+//                 drawArrow(
+//                   ctx,
+//                   shape.x,
+//                   shape.y + shape.height / 2,
+//                   shape.x + shape.width,
+//                   shape.y + shape.height / 2,
+//                   true,
+//                   shape.color,
+//                   shape.lineWidth
+//                 );
+//                 break;
+              
+            
+//         case "triangle":
+//             ctx.moveTo(shape.x + shape.width / 2, shape.y);
+//             ctx.lineTo(shape.x, shape.y + shape.height);
+//             ctx.lineTo(shape.x + shape.width, shape.y + shape.height);
+//             ctx.closePath();
+//             break;
 
-    const dot = A * C + B * D;
-    const lenSq = C * C + D * D;
-    let param = -1;
-    if (lenSq !== 0) param = dot / lenSq;
+//         case "diamond":
+//             ctx.moveTo(shape.x + shape.width / 2, shape.y);
+//             ctx.lineTo(shape.x, shape.y + shape.height / 2);
+//             ctx.lineTo(shape.x + shape.width / 2, shape.y + shape.height);
+//             ctx.lineTo(shape.x + shape.width, shape.y + shape.height / 2);
+//             ctx.closePath();
+//             break;
 
-    let xx, yy;
-    if (param < 0) {
-        xx = x1;
-        yy = y1;
-    } else if (param > 1) {
-        xx = x2;
-        yy = y2;
-    } else {
-        xx = x1 + param * C;
-        yy = y1 + param * D;
-    }
+//         case "star":
+//             drawStar(ctx, shape.x + shape.width / 2, shape.y + shape.height / 2, 5, Math.min(shape.width, shape.height) / 2, Math.min(shape.width, shape.height) / 4);
+//             break;
 
-    const dx = px - xx;
-    const dy = py - yy;
-    return dx * dx + dy * dy <= tolerance * tolerance;
-};
+//         case "hexagon":
+//             drawPolygon(ctx, shape.x + shape.width / 2, shape.y + shape.height / 2, 6, Math.min(shape.width, shape.height) / 2);
+//             break;
 
+//         case "cylinder":
+//             drawCylinder(ctx, shape);
+//             break;
 
+//         default:
+//             break;
+//             case "braceLeft": {
+//                 const x = shape.x;
+//                 const y = shape.y;
+//                 const width = shape.width;
+//                 const height = shape.height;
+    
+//                 const midY = y + height / 2;
+//                 ctx.beginPath();
+//                 ctx.moveTo(x + width, y);
+//                 ctx.bezierCurveTo(x, y, x, midY, x + width, midY);
+//                 ctx.bezierCurveTo(x, midY, x, y + height, x + width, y + height);
+//                 break;
+//             }
+    
+//             case "braceRight": {
+//                 const x = shape.x;
+//                 const y = shape.y;
+//                 const width = shape.width;
+//                 const height = shape.height;
+    
+//                 const midY = y + height / 2;
+//                 ctx.beginPath();
+//                 ctx.moveTo(x, y);
+//                 ctx.bezierCurveTo(x + width, y, x + width, midY, x, midY);
+//                 ctx.bezierCurveTo(x + width, midY, x + width, y + height, x, y + height);
+//                 break;
+//             }
+    
+//             case "cloud": {
+//                 const x = shape.x;
+//                 const y = shape.y;
+//                 const width = shape.width;
+//                 const height = shape.height;
+    
+//                 ctx.beginPath();
+//                 const r = Math.min(width, height) / 4;
+//                 ctx.arc(x + r, y + r, r, Math.PI * 0.5, Math.PI * 1.5);
+//                 ctx.arc(x + width - r, y + r, r, Math.PI * 1.0, Math.PI * 2.0);
+//                 ctx.arc(x + width - r, y + height - r, r, Math.PI * 1.5, Math.PI * 0.5);
+//                 ctx.arc(x + r, y + height - r, r, Math.PI * 2.0, Math.PI * 1.0);
+//                 ctx.closePath();
+//                 break;
+//             }
+    
+//             case "plus": {
+//                 const x = shape.x;
+//                 const y = shape.y;
+//                 const width = shape.width;
+//                 const height = shape.height;
+    
+//                 const cx = x + width / 2;
+//                 const cy = y + height / 2;
+//                 const arm = Math.min(width, height) / 4;
+                
+//                 ctx.beginPath();
+//                 ctx.moveTo(cx - arm, cy);
+//                 ctx.lineTo(cx + arm, cy);
+//                 ctx.moveTo(cx, cy - arm);
+//                 ctx.lineTo(cx, cy + arm);
+//                 break;
+//             }
+    
+                            
+//     }
 
-// ================== Shape Resizing ==================
-export const resizeShape = (shape, handle, x, y) => {
-    const { type } = shape;
-    if (type === 'rectangle') {
-        if (handle.position.includes('n')) shape.startY = y;
-        if (handle.position.includes('s')) shape.endY = y;
-        if (handle.position.includes('w')) shape.startX = x;
-        if (handle.position.includes('e')) shape.endX = x;
-    }
-    else if (type === 'circle') {
-        shape.endX = x;
-        shape.endY = y;
-    }
-    else if (type === 'line' || type === 'arrow') {
-        if (handle.position === 'start') {
-            shape.startX = x;
-            shape.startY = y;
-        }
-        if (handle.position === 'end') {
-            shape.endX = x;
-            shape.endY = y;
-        }
-    }
-    return shape;
-};
-export const drawShapePreview = ({
-    ctx,
-    tool,
-    lineStart,
-    currentPoint,
-    pivotPoint,
-    isDrawingCircle,
-    prevImg,
-    previousSnapshot,
-    canvasRef,
-    color,
-    lineWidth,
-    setCurrentPoint,
-}) => {
-    if (!ctx) return;
+//     ctx.stroke();
+// }
 
-    const { x, y } = currentPoint;
+// function drawArrow(ctx, fromX, fromY, toX, toY, bothSides, color, lineWidth = 2) {
+//     const headLength = 15; // arrowhead ka size
+//     const angle = Math.atan2(toY - fromY, toX - fromX);
+  
+//     ctx.strokeStyle = color;
+//     ctx.fillStyle = color;
+//     ctx.lineWidth = lineWidth;
+  
+//     // 🔹 Line ko arrowhead ke base tak hi draw karo
+//     const lineEndX = toX - headLength * Math.cos(angle);
+//     const lineEndY = toY - headLength * Math.sin(angle);
+  
+//     ctx.beginPath();
+//     ctx.moveTo(fromX, fromY);
+//     ctx.lineTo(lineEndX, lineEndY);
+//     ctx.stroke();
+  
+//     // 🔹 Arrowhead (end)
+//     ctx.beginPath();
+//     ctx.moveTo(toX, toY);
+//     ctx.lineTo(
+//       toX - headLength * Math.cos(angle - Math.PI / 6),
+//       toY - headLength * Math.sin(angle - Math.PI / 6)
+//     );
+//     ctx.lineTo(
+//       toX - headLength * Math.cos(angle + Math.PI / 6),
+//       toY - headLength * Math.sin(angle + Math.PI / 6)
+//     );
+//     ctx.closePath();
+//     ctx.fill();
+  
+//     if (bothSides) {
+//       // 🔹 Arrowhead (start)
+//       ctx.beginPath();
+//       ctx.moveTo(fromX, fromY);
+//       ctx.lineTo(
+//         fromX + headLength * Math.cos(angle - Math.PI / 6),
+//         fromY + headLength * Math.sin(angle - Math.PI / 6)
+//       );
+//       ctx.lineTo(
+//         fromX + headLength * Math.cos(angle + Math.PI / 6),
+//         fromY + headLength * Math.sin(angle + Math.PI / 6)
+//       );
+//       ctx.closePath();
+//       ctx.fill();
+//     }
+//   }
+  
 
-    // Restore previous snapshot
-    if (previousSnapshot) {
-        prevImg.src = previousSnapshot;
-        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        ctx.drawImage(prevImg, 0, 0, canvasRef.current.width, canvasRef.current.height);
-    }
+// function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
+//     let rot = (Math.PI / 2) * 3;
+//     let x = cx;
+//     let y = cy;
+//     const step = Math.PI / spikes;
 
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth;
-    ctx.beginPath();
+//     ctx.moveTo(cx, cy - outerRadius);
+//     for (let i = 0; i < spikes; i++) {
+//         x = cx + Math.cos(rot) * outerRadius;
+//         y = cy + Math.sin(rot) * outerRadius;
+//         ctx.lineTo(x, y);
+//         rot += step;
 
-    if (tool === "rectangle" && lineStart) {
-        ctx.strokeRect(lineStart.x, lineStart.y, x - lineStart.x, y - lineStart.y);
-    }
-    else if (tool === "circle" && lineStart) {
-        const dx = x - lineStart.x;
-        const dy = y - lineStart.y;
-        const radius = Math.sqrt(dx * dx + dy * dy);
-        ctx.arc(lineStart.x, lineStart.y, radius, 0, 2 * Math.PI);
-        ctx.stroke();
-    }
-    else if (tool === "line" && lineStart) {
-        ctx.moveTo(lineStart.x, lineStart.y);
-        ctx.lineTo(x, y);
-        ctx.stroke();
-    }
-    else if (tool === "arrow" && lineStart) {
-        ctx.moveTo(lineStart.x, lineStart.y);
-        ctx.lineTo(x, y);
-        ctx.stroke();
-        drawArrowhead(ctx, lineStart, { x, y });
-    }
-    else if (tool === "compass" && isDrawingCircle && pivotPoint) {
-        setCurrentPoint({ x, y });
-        const dx = x - pivotPoint.x;
-        const dy = y - pivotPoint.y;
-        const radius = Math.sqrt(dx * dx + dy * dy);
-        ctx.arc(pivotPoint.x, pivotPoint.y, radius, 0, 2 * Math.PI);
-        ctx.stroke();
-    }
+//         x = cx + Math.cos(rot) * innerRadius;
+//         y = cy + Math.sin(rot) * innerRadius;
+//         ctx.lineTo(x, y);
+//         rot += step;
+//     }
+//     ctx.lineTo(cx, cy - outerRadius);
+//     ctx.closePath();
+// }
 
-    ctx.closePath();
-};
-export const finalizeShape = ({
-    ctx,
-    tool,
-    lineStart,
-    endPoint,
-    pivotPoint,
-    currentPoint,
-    isDrawingCircle,
-    color,
-    lineWidth
-}) => {
-    if (!ctx) return;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth;
-    ctx.beginPath();
+// function drawPolygon(ctx, x, y, sides, radius) {
+//     const step = (2 * Math.PI) / sides;
+//     ctx.moveTo(x + radius * Math.cos(0), y + radius * Math.sin(0));
+//     for (let i = 1; i <= sides; i++) {
+//         ctx.lineTo(x + radius * Math.cos(step * i), y + radius * Math.sin(step * i));
+//     }
+//     ctx.closePath();
+// }
 
-    if (tool === "line" && lineStart) {
-        ctx.moveTo(lineStart.x, lineStart.y);
-        ctx.lineTo(endPoint.x, endPoint.y);
-        ctx.stroke();
-    }
-    else if (tool === "rectangle" && lineStart) {
-        ctx.strokeRect(lineStart.x, lineStart.y, endPoint.x - lineStart.x, endPoint.y - lineStart.y);
-    }
-    else if (tool === "circle" && lineStart) {
-        const dx = endPoint.x - lineStart.x;
-        const dy = endPoint.y - lineStart.y;
-        const radius = Math.sqrt(dx * dx + dy * dy);
-        ctx.arc(lineStart.x, lineStart.y, radius, 0, 2 * Math.PI);
-        ctx.stroke();
-    }
-    else if (tool === "arrow" && lineStart) {
-        ctx.moveTo(lineStart.x, lineStart.y);
-        ctx.lineTo(endPoint.x, endPoint.y);
-        ctx.stroke();
-        drawArrowhead(ctx, lineStart, endPoint);
-    }
-    else if (tool === "compass" && isDrawingCircle && pivotPoint && currentPoint) {
-        const dx = currentPoint.x - pivotPoint.x;
-        const dy = currentPoint.y - pivotPoint.y;
-        const radius = Math.sqrt(dx * dx + dy * dy);
-        ctx.arc(pivotPoint.x, pivotPoint.y, radius, 0, 2 * Math.PI);
-        ctx.stroke();
-    }
+// function drawCylinder(ctx, shape) {
+//     const x = shape.x;
+//     const y = shape.y;
+//     const w = shape.width;
+//     const h = shape.height;
 
-    ctx.closePath();
-};
+//     const rx = w / 2;
+//     const ry = 20;
+
+//     // Top ellipse
+//     ctx.ellipse(x + rx, y, rx, ry, 0, 0, Math.PI * 2);
+
+//     // Sides
+//     ctx.moveTo(x, y);
+//     ctx.lineTo(x, y + h);
+//     ctx.moveTo(x + w, y);
+//     ctx.lineTo(x + w, y + h);
+
+//     // Bottom ellipse (dashed look by arc)
+//     ctx.moveTo(x, y + h);
+//     ctx.ellipse(x + rx, y + h, rx, ry, 0, 0, Math.PI, false);
+// }
