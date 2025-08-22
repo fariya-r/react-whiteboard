@@ -92,7 +92,9 @@ const express = require('express');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const { db } = require('../firebaseAdmin');
-const cloudinary = require('../../config/cloudinary');
+const path = require('path');
+const cloudinary = require(path.join(__dirname, '../../config/cloudinary'));
+
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const router = express.Router();
