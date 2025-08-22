@@ -3,7 +3,7 @@ const cors = require('cors');
 const multer = require('multer');
 const admin = require('firebase-admin');
 const path = require('path');
-
+require('dotenv').config();
 let serviceAccount;
 
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {

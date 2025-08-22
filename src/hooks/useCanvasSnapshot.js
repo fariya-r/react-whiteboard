@@ -1,6 +1,5 @@
 // src/hooks/useCanvasSnapshot.js
 import { useCallback } from 'react';
-import { drawShape } from '../utils/shapeUtils'; // ✅ your shape rendering util
 
 const useCanvasSnapshot = (canvasRef, contextRef, backgroundSnapshot) => {
     const drawElementsOnCanvas = useCallback(async (shapes = [], strokes = []) => {
@@ -40,10 +39,7 @@ const useCanvasSnapshot = (canvasRef, contextRef, backgroundSnapshot) => {
             ctx.stroke();
         });
 
-        // ✅ draw shapes
-        shapes.forEach(shape => {
-            drawShape(ctx, shape); // already made util
-        });
+      
     }, [canvasRef, contextRef, backgroundSnapshot]);
 
     const getSnapshotWithElements = useCallback(
