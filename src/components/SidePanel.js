@@ -83,17 +83,17 @@ const SidePanel = ({ onTextExtracted, userId }) => {
       toast.error('Failed to fetch files.');
     }
   };
-  const handleFileClick = (fileItem) => {
-    const fileUrl = fileItem.url; // Cloudinary URL stored in Firestore
-    setSelectedFileUrl(fileUrl);
-    setSelectedFileType(fileItem.filename.split('.').pop().toLowerCase());
-  };
-  
   // const handleFileClick = (fileItem) => {
-  //   const fileUrl = `${baseUrl}/storage/${fileItem.path}`;
+  //   const fileUrl = fileItem.url; // Cloudinary URL stored in Firestore
   //   setSelectedFileUrl(fileUrl);
   //   setSelectedFileType(fileItem.filename.split('.').pop().toLowerCase());
   // };
+  
+  const handleFileClick = (fileItem) => {
+    const fileUrl = `${baseUrl}/storage/${fileItem.path}`;
+    setSelectedFileUrl(fileUrl);
+    setSelectedFileType(fileItem.filename.split('.').pop().toLowerCase());
+  };
 
   const saveExtractedText = async (textToSave) => {
     if (!userId || !textToSave) return; // Ensure userId and text are present
