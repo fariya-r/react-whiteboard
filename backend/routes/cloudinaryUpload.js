@@ -1,29 +1,29 @@
-// routes/cloudinaryUpload.js
-const express = require("express");
-const multer = require("multer");
-const { v2: cloudinary } = require("cloudinary");
-const CloudinaryStorage = require("multer-storage-cloudinary").CloudinaryStorage;
+// // routes/cloudinaryUpload.js
+// const express = require("express");
+// const multer = require("multer");
+// const { v2: cloudinary } = require("cloudinary");
+// const { CloudinaryStorage } = require("multer-storage-cloudinary"); // <-- fix here
 
-const router = express.Router();
+// const router = express.Router();
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// cloudinary.config({
+//   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+//   api_key: process.env.CLOUDINARY_API_KEY,
+//   api_secret: process.env.CLOUDINARY_API_SECRET,
+// });
 
-const cloudStorage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: "uploads",
-    resource_type: "auto",
-  },
-});
+// const cloudStorage = new CloudinaryStorage({
+//   cloudinary,
+//   params: {
+//     folder: "uploads",
+//     resource_type: "auto", // allows images, videos, pdf, etc
+//   },
+// });
 
-const uploadCloud = multer({ storage: cloudStorage });
+// const uploadCloud = multer({ storage: cloudStorage });
 
-router.post("/upload-file-cloud", uploadCloud.single("file"), (req, res) => {
-  return res.json({ url: req.file.path });
-});
+// router.post("/upload-file-cloud", uploadCloud.single("file"), (req, res) => {
+//   return res.json({ url: req.file.path });
+// });
 
-module.exports = router;
+// module.exports = router;
