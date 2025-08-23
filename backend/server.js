@@ -32,7 +32,7 @@ const deleteTeacherRoute = require('./routes/deleteTeacher');
 const fileRoutes = require('./routes/fileRoutes');
 
 //cloudiary:
-// const cloudinaryUploadRoute = require('./routes/cloudinaryUpload');
+const cloudinaryUploadRoute = require('./routes/cloudinaryUpload');
 
 const app = express();
 
@@ -137,7 +137,7 @@ app.use('/api', teacherRoutes);
 app.use('/api/teacher', deleteTeacherRoute);
 
 //Cloudinary
-// app.use('/api', cloudinaryUploadRoute);
+app.use('/api', cloudinaryUploadRoute);
 
 
 app.post('/api/upload-recording', upload.single('file'), (req, res) => {
