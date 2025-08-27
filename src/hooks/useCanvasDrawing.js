@@ -31,10 +31,15 @@ const useCanvasDrawing = (
     const COMPASS_HEIGHT = 100;
     const [previousSnapshot, setPreviousSnapshot] = useState(null);
     const prevImg = new Image();
+    const [protractorPosition, setProtractorPosition] = useState({ x: 200, y: 200 });
+    const [isDraggingProtractor, setIsDraggingProtractor] = useState(false);
+    const [protractorRadius, setProtractorRadius] = useState(120);
+    const [angles, setAngles] = useState([]);
+    const [circles, setCircles] = useState([]);
 
     const handleUpdateStickyNoteSize = useCallback((id, newSize) => {
-        setStickyNotes(prevNotes => 
-            prevNotes.map(note => 
+        setStickyNotes(prevNotes =>
+            prevNotes.map(note =>
                 note.id === id ? { ...note, width: newSize.width, height: newSize.height } : note
             )
         );
@@ -67,49 +72,149 @@ const useCanvasDrawing = (
             clientX = e.clientX;
             clientY = e.clientY;
         }
-        
+
         const x = (clientX - rect.left) / scale;
         const y = (clientY - rect.top) / scale;
         return { x, y };
     }, [canvasRef, scale]);
 
-    const drawRulerPreview = useCallback((e) => {
-        if (!isDrawing || !rulerStart || !contextRef.current) return;
-        const ctx = contextRef.current;
-        const { x, y } = getScaledCoordinates(e);
+    const handleProtractorDrag = useCallback((x, y) => {
+        setProtractorPosition({ x: x, y: y });
+    }, [setProtractorPosition]);
+
+   const finalizeAngle = useCallback((angleData) => {
+    if (!angleData) return;
+    const centerX = protractorPosition.x;
+    const centerY = protractorPosition.y;
+    const radius = protractorRadius;
+    const startAngle = 0; // baseline (right side)
     
-        const draw = () => {
-            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            if (previousSnapshot) {
-                prevImg.onload = () => {};
-                prevImg.src = previousSnapshot;
-                ctx.drawImage(prevImg, 0, 0, canvasRef.current.width, canvasRef.current.height);
-            }
+    // REVERTED: Keep the original negative angle to represent clockwise rotation
+    const endAngle = (-angleData.angle * Math.PI) / 180; 
     
-            ctx.strokeStyle = color;
-            ctx.lineWidth = lineWidth;
-            ctx.beginPath();
-            ctx.moveTo(rulerStart.x, rulerStart.y);
-            ctx.lineTo(x, y);
-            ctx.stroke();
-            ctx.closePath();
+    setAngles(prev => [...prev, { centerX, centerY, radius, startAngle, endAngle }]);
+    
+    const ctx = contextRef.current;
+    if (ctx) {
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        if (backgroundSnapshot) {
+            const bgImg = new Image();
+            bgImg.src = backgroundSnapshot;
+            bgImg.onload = () => {
+                ctx.drawImage(bgImg, 0, 0, canvasRef.current.width, canvasRef.current.height);
+                drawAngle(ctx, centerX, centerY, radius, startAngle, endAngle);
+            };
+        } else {
+            drawAngle(ctx, centerX, centerY, radius, startAngle, endAngle);
         }
+        
+    }
+}, [protractorPosition, protractorRadius, setAngles, contextRef, backgroundSnapshot]);
+
+    function drawAngle(ctx, centerX, centerY, radius, startAngle, endAngle) {
+    const lineLengthMultiplier = 1.2;
+    const arrowSize = 10;
+
+    // --- Draw lines and arrowheads ---
+    // baseline
+    ctx.beginPath();
+    const startLineX = centerX + (radius * lineLengthMultiplier) * Math.cos(startAngle);
+    const startLineY = centerY + (radius * lineLengthMultiplier) * Math.sin(startAngle);
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(startLineX, startLineY);
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    drawArrowhead(ctx, startLineX, startLineY, startAngle, arrowSize);
+
+    // angle line
+    ctx.beginPath();
+    const endLineX = centerX + (radius * lineLengthMultiplier) * Math.cos(endAngle);
+    const endLineY = centerY + (radius * lineLengthMultiplier) * Math.sin(endAngle);
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(endLineX, endLineY);
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    drawArrowhead(ctx, endLineX, endLineY, endAngle, arrowSize);
+
+    let spanAngle = endAngle - startAngle;
+    if (spanAngle < 0) {
+        spanAngle += 2 * Math.PI;
+    }
+    const angleDeg = Math.round(spanAngle * 180 / Math.PI);
     
-        draw();
-    }, [isDrawing, rulerStart, contextRef, getScaledCoordinates, previousSnapshot, color, lineWidth]);
+
+    // --- Draw arc (from Version B) ---
+    // This logic correctly places the arc inside or outside based on the angle span.
+    const arcRadius = radius / 4;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, arcRadius, startAngle, endAngle, angleDeg > 180);
+    ctx.strokeStyle = "green";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // --- Draw label (from Version A) ---
+      const displayedAngle = Math.abs(Math.round(endAngle * 180 / Math.PI));
+
+    // Handle label position for angles > 180°
+    let midAngle = (startAngle + endAngle) / 2;
+    if (displayedAngle > 180) {
+        midAngle = (endAngle + Math.PI); 
+    }
+
+    const labelX = centerX + (arcRadius + 15) * Math.cos(midAngle);
+    const labelY = centerY + (arcRadius + 15) * Math.sin(midAngle);
+
+    ctx.fillStyle = "black";
+    ctx.font = "12px Arial";
+    // Display the absolute angle from the protractor, which is what you want
+    ctx.fillText(displayedAngle + "°", labelX, labelY);
+}
+
+
+// Helper function to draw a single arrowhead
+function drawArrowhead(ctx, x, y, angle, size) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-size, -size / 2);
+    ctx.lineTo(-size, size / 2);
+    ctx.closePath();
+    ctx.fillStyle = "black";
+    ctx.fill();
+    ctx.restore();
+}
     
+    // Naya function jo Compass component use karega circle draw karne ke liye
+    const drawCircleOnCanvas = (x, y, radius, startAngle, endAngle) => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        
+        // Convert degrees to radians for canvas drawing
+        const startRadians = (startAngle * Math.PI) / 180;
+        const endRadians = (endAngle * Math.PI) / 180;
+      
+        // This will draw a single arc
+        ctx.beginPath();
+        ctx.arc(x, y, radius, startRadians, endRadians);
+        ctx.stroke();
+      };
+
     const drawLinePreview = useCallback((e) => {
         if (!isDrawing || !lineStart || !contextRef.current) return;
         const ctx = contextRef.current;
         const { x, y } = getScaledCoordinates(e);
-    
+
         // Restore previous snapshot
         const img = new Image();
         img.src = previousSnapshot;
         img.onload = () => {
             ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
             ctx.drawImage(img, 0, 0, canvasRef.current.width, canvasRef.current.height);
-    
+
             // Draw the line preview
             ctx.strokeStyle = color;
             ctx.lineWidth = lineWidth;
@@ -120,7 +225,6 @@ const useCanvasDrawing = (
             ctx.closePath();
         };
     }, [isDrawing, lineStart, contextRef, getScaledCoordinates, previousSnapshot, color, lineWidth]);
-    
 
     const startDrawing = useCallback((e) => {
         if (!contextRef.current || tool === 'text') return;
@@ -133,21 +237,19 @@ const useCanvasDrawing = (
                     x: x - compassPosition.x,
                     y: y - compassPosition.y,
                 });
-            } else {
-                setIsDrawingCircle(true);
-                setPivotPoint({ x, y });
-                setPreviousSnapshot(canvasRef.current.toDataURL());
             }
+            // Compass tool ab canvas par circle nahi banayega
             return;
         }
+
         if (tool === 'lined') {
             setLineStart({ x, y });
             setIsDrawing(true);
             setPreviousSnapshot(canvasRef.current.toDataURL()); // for preview
             return;
         }
-        
-        
+
+
         if (tool === 'pen' || tool === 'eraser') {
             contextRef.current.beginPath();
             contextRef.current.moveTo(x, y);
@@ -162,7 +264,7 @@ const useCanvasDrawing = (
             };
             setStickyNotes(prevNotes => [...prevNotes, newNote]);
         }
-        
+
         if (socket) {
             socket.emit('drawing', { room: sessionId, action: 'start', x, y, tool, color, lineWidth });
         }
@@ -171,7 +273,7 @@ const useCanvasDrawing = (
     const drawLine = useCallback((e) => {
         if (!isDrawing || !contextRef.current) return;
         const { x, y } = getScaledCoordinates(e);
-        
+
         if (tool === 'pen') {
             contextRef.current.lineTo(x, y);
             contextRef.current.stroke();
@@ -186,37 +288,14 @@ const useCanvasDrawing = (
 
     const drawShapePreview = useCallback((e) => {
         if (!isDrawingCircle || !contextRef.current || !pivotPoint) return;
-        const ctx = contextRef.current;
-        const { x, y } = getScaledCoordinates(e);
-    
-        const draw = () => {
-            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            ctx.drawImage(prevImg, 0, 0, canvasRef.current.width, canvasRef.current.height);
-    
-            ctx.strokeStyle = color;
-            ctx.lineWidth = lineWidth;
-            ctx.beginPath();
-            const dx = x - pivotPoint.x;
-            const dy = y - pivotPoint.y;
-            const radius = Math.sqrt(dx * dx + dy * dy);
-            ctx.arc(pivotPoint.x, pivotPoint.y, radius, 0, 2 * Math.PI);
-            ctx.stroke();
-            ctx.closePath();
-        }
-    
-        if (previousSnapshot) {
-            prevImg.onload = draw;
-            prevImg.src = previousSnapshot;
-        } else {
-            draw();
-        }
+        // This function is no longer used for the compass tool
     }, [isDrawingCircle, contextRef, getScaledCoordinates, previousSnapshot, color, lineWidth, pivotPoint]);
-    
+
     const finishDrawing = useCallback((e) => {
         if (!isDrawing && !isDrawingCircle && !isDraggingCompass) return;
         const { x, y } = getScaledCoordinates(e);
         const ctx = contextRef.current;
-        
+
         if (isDraggingCompass) {
             setIsDraggingCompass(false);
             return;
@@ -230,32 +309,10 @@ const useCanvasDrawing = (
             ctx.lineTo(x, y);
             ctx.stroke();
             ctx.closePath();
-        
+
             setLineStart(null);
             setIsDrawing(false);
-        
-            const snapshot = canvasRef.current.toDataURL();
-            setBackgroundSnapshot(snapshot);
-            if (socket) {
-                socket.emit('drawing', { room: sessionId, action: 'finish', image: snapshot });
-            }
-            return;
-        }
-        
 
-        if (tool === 'compass' && isDrawingCircle && pivotPoint) {
-            ctx.strokeStyle = color;
-            ctx.lineWidth = lineWidth;
-            ctx.beginPath();
-            const dx = x - pivotPoint.x;
-            const dy = y - pivotPoint.y;
-            const radius = Math.sqrt(dx * dx + dy * dy);
-            ctx.arc(pivotPoint.x, pivotPoint.y, radius, 0, 2 * Math.PI);
-            ctx.stroke();
-            ctx.closePath();
-            setIsDrawingCircle(false);
-            setPivotPoint(null);
-            setCurrentPoint(null);
             const snapshot = canvasRef.current.toDataURL();
             setBackgroundSnapshot(snapshot);
             if (socket) {
@@ -263,16 +320,39 @@ const useCanvasDrawing = (
             }
             return;
         }
+
+        // Compass circle drawing logic yahan se hata diya gaya hai
 
         if (tool === 'pen' || tool === 'eraser') {
             ctx.closePath();
         }
-
+        if (isDrawingCircle && tool === 'compass' && pivotPoint) {
+            const dx = x - pivotPoint.x;
+            const dy = y - pivotPoint.y;
+            const radius = Math.sqrt(dx * dx + dy * dy);
+        
+            // Save circle to state ✅
+            setCircles(prev => [
+                ...prev,
+                { x: pivotPoint.x, y: pivotPoint.y, r: radius, color, lineWidth }
+            ]);
+        
+            // Final draw on canvas
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.beginPath();
+            ctx.arc(pivotPoint.x, pivotPoint.y, radius, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.closePath();
+        
+            setIsDrawingCircle(false);
+        }
+        const snapshot = canvasRef.current.toDataURL();
+setBackgroundSnapshot(snapshot);
         setIsDrawing(false);
         setPreviousSnapshot(null);
 
-        const snapshot = canvasRef.current.toDataURL();
-        setBackgroundSnapshot(snapshot);
+     
 
         if (socket) {
             socket.emit('drawing', { room: sessionId, action: 'finish', image: snapshot });
@@ -285,65 +365,53 @@ const useCanvasDrawing = (
     }, [contextRef, startDrawing]);
 
     useEffect(() => {
-       const handleMove = (e) => {
-    if (!contextRef.current) return;
-    const { x, y } = getScaledCoordinates(e);
+        const handleMove = (e) => {
+            if (!contextRef.current) return;
+            const { x, y } = getScaledCoordinates(e);
 
-    if (isDraggingCompass) {
-        // Move compass
-        setCompassPosition({ x: x - dragStartOffset.x, y: y - dragStartOffset.y });
-        return;
-    }
+            if (isDraggingCompass) {
+                // Move compass
+                setCompassPosition({ x: x - dragStartOffset.x, y: y - dragStartOffset.y });
+                return;
+            }
 
-    if (tool === 'lined' && isDrawing && lineStart) {
-        drawLinePreview(e);
-        return;
-    }
-    
+            if (tool === 'lined' && isDrawing && lineStart) {
+                drawLinePreview(e);
+                return;
+            }
 
-    if (isDrawingCircle && pivotPoint && tool === 'compass') {
-        setCurrentPoint({ x, y });
-        const dx = x - pivotPoint.x;
-        const dy = y - pivotPoint.y;
-        const angle = Math.atan2(dy, dx);
-        setCompassAngle(angle + Math.PI / 2);
-        drawShapePreview(e);
-        return;
-    }
+            // Compass circle preview logic yahan se hata diya gaya hai
 
-    if (isDrawing && ['pen', 'eraser'].includes(tool)) {
-        drawLine(e);
-    }
-};
+            if (isDrawing && ['pen', 'eraser'].includes(tool)) {
+                drawLine(e);
+            }
+        };
 
         const handleUp = (e) => {
             if (isDraggingCompass) {
                 setIsDraggingCompass(false);
                 return;
             }
+
             if ((isDrawingCircle && tool === 'compass') || (isDrawing && ['pen', 'eraser', 'line'].includes(tool))) {
                 finishDrawing(e);
             }
-            if (isDrawingCircle && tool === 'compass') {
-                finishDrawing(e);
-            } else if (isDrawing && ['pen', 'eraser'].includes(tool)) {
-                finishDrawing(e);
-            }
         };
-    
+
+
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleUp);
         window.addEventListener('touchmove', handleMove);
         window.addEventListener('touchend', handleUp);
-    
+
         return () => {
             window.removeEventListener('mousemove', handleMove);
             window.removeEventListener('mouseup', handleUp);
             window.removeEventListener('touchmove', handleMove);
             window.removeEventListener('touchend', handleUp);
         };
-    }, [isDrawing, tool, drawLine, drawShapePreview, finishDrawing, contextRef, isDraggingCompass, dragStartOffset, setCompassPosition, getScaledCoordinates, setIsDraggingCompass, isDrawingCircle, pivotPoint, setCompassAngle]);
-    
+    }, [isDrawing, tool, drawLine, drawShapePreview, finishDrawing, contextRef, isDraggingCompass, dragStartOffset, setCompassPosition, getScaledCoordinates, setIsDraggingCompass, isDrawingCircle, pivotPoint, setCompassAngle, drawLinePreview, lineStart]);
+
     return {
         tool, setTool,
         color, setColor,
@@ -359,7 +427,14 @@ const useCanvasDrawing = (
         startDrawing, drawLine, finishDrawing, handleMouseDown,
         getScaledCoordinates,
         drawShapePreview,
-        handleUpdateStickyNoteSize
+        handleUpdateStickyNoteSize,
+        protractorPosition, setProtractorPosition,
+        isDraggingProtractor, setIsDraggingProtractor,
+        protractorRadius, setProtractorRadius,
+        handleProtractorDrag,
+        finalizeAngle,
+        drawCircleOnCanvas,
+        circles, setCircles // Naya function jo Compass component use karega
     };
 };
 

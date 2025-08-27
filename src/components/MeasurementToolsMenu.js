@@ -1,28 +1,32 @@
 import React, { useState } from 'react';
-import { FaRulerCombined, FaRuler, FaCompass } from 'react-icons/fa';
-
+import { FaRulerCombined, FaRuler, FaCompass, FaDraftingCompass } from 'react-icons/fa';
+import Compass from './Compass';
 const MeasurementToolsMenu = ({ tool, setTool, setShowRuler }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleRulerClick = () => {
-    // Show ruler and set line tool
     setShowRuler(true);
-    setTool('line');
+    setTool('line');   // ruler works with line tool
     setIsMenuOpen(false);
   };
 
   const handleCompassClick = () => {
-    // Correctly use the setTool prop to update the state in the parent App component
-    setTool(prevTool => (prevTool === 'compass' ? null : 'compass'));
-    setShowRuler(false); // Hide ruler if compass is selected
+    setTool(prev => (prev === 'compass' ? null : 'compass'));
+    setShowRuler(false);
     setIsMenuOpen(false);
   };
-  
+
+  const handleProtractorClick = () => {
+    setTool(prev => (prev === 'protractor' ? null : 'protractor'));
+    setShowRuler(false);
+    setIsMenuOpen(false);
+  };
+
   return (
     <div className="relative">
       <button
         onClick={() => setIsMenuOpen(prev => !prev)}
-        className={`btn ${isMenuOpen || tool === 'compass' || tool === 'line' ? 'bg-blue-200' : ''}`}
+        className={`btn ${isMenuOpen || tool === 'compass' || tool === 'line' || tool === 'protractor' ? 'bg-blue-200' : ''}`}
         title="Measurement Tools"
       >
         <FaRulerCombined />
@@ -30,6 +34,7 @@ const MeasurementToolsMenu = ({ tool, setTool, setShowRuler }) => {
 
       {isMenuOpen && (
         <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg p-2 flex space-x-2 border border-gray-200">
+          {/* ✅ Ruler */}
           <button
             onClick={handleRulerClick}
             className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'line' && 'bg-blue-200'}`}
@@ -37,12 +42,23 @@ const MeasurementToolsMenu = ({ tool, setTool, setShowRuler }) => {
           >
             <FaRuler />
           </button>
+
+          {/* ✅ Compass */}
           <button
-            onClick={handleCompassClick} // This button's click handler will now update the state in App
+            onClick={handleCompassClick}
             className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'compass' && 'bg-blue-200'}`}
             title="Compass"
           >
             <FaCompass />
+          </button>
+
+          {/* ✅ Protractor */}
+          <button
+            onClick={handleProtractorClick}
+            className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'protractor' && 'bg-blue-200'}`}
+            title="Protractor"
+          >
+            <FaDraftingCompass />
           </button>
         </div>
       )}

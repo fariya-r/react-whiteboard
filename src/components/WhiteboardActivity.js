@@ -25,6 +25,10 @@ import StickyNote from './StickyNote';
 import useCanvasSnapshot from '../hooks/useCanvasSnapshot';
 import Shape from '../components/Shape';
 import ShapeRenderer from "../components/ShapeRenderer";
+import Protractor from "../components/Protractor";
+import MeasurementToolsMenu from "../components/MeasurementToolsMenu";
+import Compass from './Compass';
+
 
 const WhiteboardActivity = () => {
     const canvasRef = useRef(null);
@@ -82,18 +86,37 @@ const WhiteboardActivity = () => {
     const [loading, setLoading] = useState(true);
     const [whiteboardId, setWhiteboardId] = useState(null);
     const [circles, setCircles] = useState([]);
-
+    const [protractorAngle, setProtractorAngle] = useState(0);
+    const [protractorHandle, setProtractorHandle] = useState({ x: 250, y: 0 });
+    const [protractorRadius, setProtractorRadius] = useState(250);
     useEffect(() => {
         const load = async () => {
             if (!whiteboardId) return;
             const whiteboards = await getWhiteboards();
             const wb = whiteboards.find(wb => wb.id === whiteboardId);
             if (wb?.shapes) setShapes(wb.shapes);
+            if (wb?.circles) setCircles(wb.circles); 
             setLoading(false);
         };
         load();
     }, [whiteboardId]);
-
+    useEffect(() => {
+        if (!user) return; // user na ho to skip
+    
+        const autoSave = async () => {
+            await handleSave();
+        };
+    
+        autoSave();
+    }, [circles]);  // ✅ circles change hote hi save hoga
+    useEffect(() => {
+        if (!user) return;
+        const autoSave = async () => {
+            await handleSave();
+        };
+        autoSave();
+    }, [shapes]);
+        
     const handleShapeClick = (selectedShape) => {
         setTool(selectedShape);
         setIsShapesMenuOpen(false);
@@ -152,6 +175,7 @@ const WhiteboardActivity = () => {
             canvas.style.backgroundColor = backgroundColor;
         }
     }, [backgroundColor]);
+
     const {
         tool, setTool,
         color, setColor,
@@ -159,7 +183,11 @@ const WhiteboardActivity = () => {
         isDrawing, setIsDrawing,
         stickyNotes, setStickyNotes,
         startDrawing, drawLine, finishDrawing, handleMouseDown, getScaledCoordinates, drawShapePreview,
-        handleUpdateStickyNoteSize
+        handleUpdateStickyNoteSize,
+        protractorPosition,
+        finalizeAngle,
+        drawCircleOnCanvas
+
 
     } = useCanvasDrawing(
         canvasRef,
@@ -184,7 +212,8 @@ const WhiteboardActivity = () => {
         pivotPoint,
         setPivotPoint,
         currentPoint,
-        setCurrentPoint
+        setCurrentPoint,
+
     );
 
     const handleScroll = (e) => {
@@ -196,7 +225,7 @@ const WhiteboardActivity = () => {
 
 
     const { getSnapshotWithElements } = useCanvasSnapshot(
-        canvasRef, contextRef, backgroundSnapshot, textBoxes, stickyNotes
+        canvasRef, contextRef, backgroundSnapshot, circles
     );
     const { handleUndo, handleRedo, handleZoom, handleReset } = useWhiteboardActions(
         canvasRef,
@@ -339,6 +368,8 @@ const WhiteboardActivity = () => {
             setShowSavedBoards(false);
             setShapes(Array.isArray(boardToLoad.shapes) ? boardToLoad.shapes : []);
         };
+      
+          
         img.onerror = (e) => {
             console.error("Error loading board snapshot image in loadBoard:", e);
             contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -365,74 +396,61 @@ const WhiteboardActivity = () => {
         }
     };
 
-    const drawTextBoxesOnCanvas = async () => {
-        const ctx = contextRef.current;
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        if (backgroundSnapshot) {
-            const img = new Image();
-            img.src = backgroundSnapshot;
-            await new Promise(resolve => {
-                img.onload = () => {
-                    ctx.drawImage(img, 0, 0);
-                    resolve();
-                };
-            });
-        }
-    };
+    
 
     const handleSave = async () => {
         if (!user) {
             alert('Please log in to save');
             return;
         }
+    
+        const canvas = canvasRef.current;
+        const ocrText = extractedTextState || '';
+    
+        // ✅ Snapshot generate (background + textBoxes + stickyNotes + shapes + circles)
+        const dataUrl = await getSnapshotWithElements(
 
-        await drawTextBoxesOnCanvas();
-
-        setTimeout(async () => {
-            const canvas = canvasRef.current;
-            const ocrText = extractedTextState || '';
-
-            // ✅ Snapshot generate (snapshot + overlay elements)
-            const dataUrl = await getSnapshotWithElements(textBoxes, stickyNotes, shapes, circles);
-
-            // ✅ Current background color
-            const currentBackgroundColor = canvas.style.backgroundColor || "#ffffff";
-
-            // ✅ Firestore update or save
-            if (currentBoardId) {
-                await updateWhiteboard(
-                    currentBoardId,
-                    dataUrl,
-                    tool || "pencil",
-                    color || "#000000",
-                    lineWidth || 2,
-                    textBoxes || [],
-                    circles || [],
-                    shapes || [],
-                    fileUrls || [],
-                    ocrText,
-                    stickyNotes || [],
-                    currentBackgroundColor
-                );
-            } else {
-                const newId = await saveWhiteboard(
-                    dataUrl,
-                    tool || "pencil",
-                    color || "#000000",
-                    lineWidth || 2,
-                    textBoxes || [],
-                    circles || [],
-                    shapes || [],
-                    fileUrls || [],
-                    ocrText,
-                    stickyNotes || [],
-                    currentBackgroundColor
-                );
-                setCurrentBoardId(newId);
-            }
-        }, 100);
+            shapes,
+            circles
+        );
+    
+        // ✅ Current background color
+        const currentBackgroundColor = canvas.style.backgroundColor || "#ffffff";
+    
+        // ✅ Firestore update or save
+        if (currentBoardId) {
+            await updateWhiteboard(
+                currentBoardId,
+                dataUrl,
+                tool || "pencil",
+                color || "#000000",
+                lineWidth || 2,
+                textBoxes || [],
+                shapes || [],
+                fileUrls || [],
+                ocrText,
+                stickyNotes || [],
+                currentBackgroundColor,
+                circles || [] 
+            );
+        } else {
+            const newId = await saveWhiteboard(
+                dataUrl,
+                tool || "pencil",
+                color || "#000000",
+                lineWidth || 2,
+                textBoxes || [],
+                shapes || [],
+                fileUrls || [],
+                ocrText,
+                stickyNotes || [],
+                currentBackgroundColor,
+                circles || [] 
+            );
+            setCurrentBoardId(newId);
+        }
     };
+    
 
 
     const fetchSavedBoards = async () => {
@@ -520,14 +538,14 @@ const WhiteboardActivity = () => {
                     onClick={(e) => {
                         if (tool === "text") handleTextCanvasClick(e);
                         else if (
-                          ['rectangle','circle','line','arrow','triangle','diamond','star','hexagon',
-                           'cylinder','arrow-left','arrow-right','arrow-both','brace-left','brace-right','cloud','plus',
-                           'trapezoid','parallelogram','octagon','speechBubble','hamburger'].includes(tool)
+                            ['rectangle', 'circle', 'line', 'arrow', 'triangle', 'diamond', 'star', 'hexagon',
+                                'cylinder', 'arrow-left', 'arrow-right', 'arrow-both', 'brace-left', 'brace-right', 'cloud', 'plus',
+                                'trapezoid', 'parallelogram', 'octagon', 'speechBubble', 'hamburger'].includes(tool)
                         ) {
-                          handleCanvasClick(e);  // now new shapes are included
+                            handleCanvasClick(e);  // now new shapes are included
                         }
-                      }}
-                      
+                    }}
+
                     onTouchStart={handleMouseDown}
                     onTouchMove={isDrawing ? drawLine : undefined}
                     onTouchEnd={finishDrawing}
@@ -535,37 +553,52 @@ const WhiteboardActivity = () => {
                 />
 
                 {/* Render shapes over canvas */}
-{shapes.map((shape) => (
-  <Shape
-    key={shape.id}
-    shape={shape}
-    onUpdate={updateShape}
-    onDelete={deleteShape}
-  />
-))}
+                {shapes.map((shape) => (
+                    <Shape
+                        key={shape.id}
+                        shape={shape}
+                        onUpdate={updateShape}
+                        onDelete={deleteShape}
+                    />
+                ))}
 
+
+                {/* ✅ Conditionally render Protractor */}
+                {tool === "protractor" && (
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: "150px",
+                            left: "200px",
+                            zIndex: 50,
+                        }}
+                    >
+                        <Protractor
+                            radius={protractorRadius}
+                            handlePos={protractorHandle}
+                            setHandlePos={setProtractorHandle}
+                            angle={protractorAngle}
+                            setAngle={setProtractorAngle}
+                            onDrawAngle={finalizeAngle} // aapka whiteboard ka function jo angle draw kare
+                        />
+                    </div>
+                )}
+
+{tool === 'compass' && (
+                <Compass
+                    // The position is now a controlled prop, managed by the parent component
+                    position={compassPosition}
+
+                    onDrawCircle={drawCircleOnCanvas}
+                />
+            )}
 
             </div>
+            
+           
 
-            {
-                tool === 'compass' && (
-                    <img
-                        src="/assets/compass.png"
-                        alt="Compass Tool"
-                        style={{
-                            position: 'absolute',
-                            left: compassPosition.x * scale,
-                            top: compassPosition.y * scale,
-                            width: `100px`, // Use COMPASS_WIDTH if defined
-                            height: `100px`, // Use COMPASS_HEIGHT if defined
-                            transform: `rotate(${compassAngle}deg)`,
-                            cursor: isDraggingCompass ? 'grabbing' : 'grab',
-                            pointerEvents: isDraggingCompass ? 'none' : 'auto',
-                        }}
-                        className="z-50"
-                    />
-                )
-            }
+
+
 
             <WhiteboardTextLayer
                 activeTextBox={activeTextBox}

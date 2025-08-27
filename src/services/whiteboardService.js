@@ -27,12 +27,13 @@ export const saveWhiteboard = async (
   color,
   lineWidth,
   textBoxes,
-  circles,
   shapes,
   fileUrls,
   ocrText,
   stickyNotes,
-  backgroundColor
+  backgroundColor,
+  circles
+
 ) => {
   const auth = getAuth();
   const user = auth.currentUser;
@@ -45,7 +46,6 @@ export const saveWhiteboard = async (
     color: color || "#000000",
     lineWidth: lineWidth || 2,
     textBoxes: textBoxes || [],
-    circles: circles || [],
     shapes: shapes || [],      // ✅ ensure always an array
     files: fileUrls || [],
     ocrText: ocrText || "",
@@ -55,6 +55,8 @@ export const saveWhiteboard = async (
     createdByUid: user.uid,
     createdByName: user.displayName || "Unknown",
     createdByEmail: user.email || "",
+        circles: circles || [],
+
   });
 
   return docRef.id;
@@ -85,12 +87,12 @@ export const updateWhiteboard = async (
   color,
   lineWidth,
   textBoxes,
-  circles,
   shapes,
   fileUrls,
   ocrText,
   stickyNotes,
-  backgroundColor
+  backgroundColor,
+  circles
 ) => {
   const auth = getAuth();
   const user = auth.currentUser;
@@ -103,13 +105,14 @@ export const updateWhiteboard = async (
     color: color || "#000000",
     lineWidth: lineWidth || 2,
     textBoxes: textBoxes || [],
-    circles: circles || [],
     shapes: shapes || [],      // ✅ ensure always an array
     files: fileUrls || [],
     ocrText: ocrText || "",
     stickyNotes: stickyNotes || [],
     backgroundColor: backgroundColor || "#ffffff",
-    updatedAt: new Date(),     // 👈 createdAt ki jagah updatedAt rakho
+    updatedAt: new Date(),  
+    circles: circles || [],
+   // 👈 createdAt ki jagah updatedAt rakho
   });
 };
 

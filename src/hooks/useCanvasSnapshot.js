@@ -1,7 +1,7 @@
 // src/hooks/useCanvasSnapshot.js
 import { useCallback } from 'react';
 
-const useCanvasSnapshot = (canvasRef, contextRef, backgroundSnapshot) => {
+const useCanvasSnapshot = (canvasRef, contextRef, backgroundSnapshot,circles) => {
     const drawElementsOnCanvas = useCallback(async (shapes = [], strokes = []) => {
         const ctx = contextRef.current;
         const canvas = canvasRef.current;
@@ -38,9 +38,17 @@ const useCanvasSnapshot = (canvasRef, contextRef, backgroundSnapshot) => {
             });
             ctx.stroke();
         });
+        circles.forEach(c => {
+          ctx.strokeStyle = c.color || "#000";
+          ctx.lineWidth = c.lineWidth || 2;
+          ctx.beginPath();
+          ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+    
 
       
-    }, [canvasRef, contextRef, backgroundSnapshot]);
+    }, [canvasRef, contextRef, backgroundSnapshot,circles]);
 
     const getSnapshotWithElements = useCallback(
         async (textBoxes = [], stickyNotes = [], shapes = [], strokes = []) => {

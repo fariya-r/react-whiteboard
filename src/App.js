@@ -15,6 +15,7 @@ import ProfileModal from './components/ProfileModal';
 import TeacherWhiteboards from './components/TeacherWhiteboards';
 import Header from './components/Header';
 import WhiteboardTextLayer from './components/WhiteboardTextLayer';
+import Protractor from './components/Protractor';
 
 import RealtimeCollaborationManager, { generateWhiteboardId } from './components/RealtimeCollaborationManager'; // Adjust the path if your component is in a different folder
 
