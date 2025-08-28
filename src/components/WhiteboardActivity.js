@@ -89,6 +89,8 @@ const WhiteboardActivity = () => {
     const [protractorAngle, setProtractorAngle] = useState(0);
     const [protractorHandle, setProtractorHandle] = useState({ x: 250, y: 0 });
     const [protractorRadius, setProtractorRadius] = useState(250);
+    const [activeTouches, setActiveTouches] = useState({});
+
     useEffect(() => {
         const load = async () => {
             if (!whiteboardId) return;
@@ -117,6 +119,59 @@ const WhiteboardActivity = () => {
         autoSave();
     }, [shapes]);
         
+    const handleTouchStart = (e) => {
+        e.preventDefault();
+        const touches = e.touches;
+        const newTouches = { ...activeTouches };
+    
+        for (let i = 0; i < touches.length; i++) {
+            const touch = touches[i];
+            const rect = canvasRef.current.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+    
+            newTouches[touch.identifier] = { x, y };
+        }
+        setActiveTouches(newTouches);
+    };
+    
+    const handleTouchMove = (e) => {
+        e.preventDefault();
+        const touches = e.touches;
+        const newTouches = { ...activeTouches };
+    
+        for (let i = 0; i < touches.length; i++) {
+            const touch = touches[i];
+            const rect = canvasRef.current.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+    
+            const prev = newTouches[touch.identifier];
+            if (prev) {
+                // Draw line from previous point to new point
+                const ctx = contextRef.current;
+                ctx.beginPath();
+                ctx.moveTo(prev.x, prev.y);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            }
+    
+            newTouches[touch.identifier] = { x, y };
+        }
+    
+        setActiveTouches(newTouches);
+    };
+    
+    const handleTouchEnd = (e) => {
+        const newTouches = { ...activeTouches };
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            delete newTouches[touch.identifier];
+        }
+        setActiveTouches(newTouches);
+    };
+    
+
     const handleShapeClick = (selectedShape) => {
         setTool(selectedShape);
         setIsShapesMenuOpen(false);
@@ -532,6 +587,9 @@ const WhiteboardActivity = () => {
                         top: 0,
                         left: 0,
                     }}
+                    onTouchStart={handleTouchStart}
+  onTouchMove={handleTouchMove}
+  onTouchEnd={handleTouchEnd}
                     onMouseDown={handleMouseDown}
                     onMouseMove={isDrawing ? drawLine : undefined}
                     onMouseUp={finishDrawing}
@@ -546,9 +604,6 @@ const WhiteboardActivity = () => {
                         }
                     }}
 
-                    onTouchStart={handleMouseDown}
-                    onTouchMove={isDrawing ? drawLine : undefined}
-                    onTouchEnd={finishDrawing}
                     className="cursor-crosshair"
                 />
 
