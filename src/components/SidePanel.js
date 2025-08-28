@@ -49,19 +49,12 @@ const SidePanel = ({ onTextExtracted, userId }) => {
     }
   };
 
-  const handleDelete = async (fileId) => {
-    if (!userId) {
-      toast.error("User ID not found. Please log in.");
-      return;
-    }
+  const handleDelete = async (fileName) => {
     try {
-      await axios.delete(`${baseUrl}/api/files/${fileId}`, {
-        params: { user_id: userId },
-      });
+      await axios.delete(`${baseUrl}/api/files/${fileName}`);
       toast.success("File deleted successfully");
-      fetchFiles(); // Refresh the file list
-      // Clear selected file preview if the deleted file was being previewed
-      if (selectedFileUrl && selectedFileUrl.includes(fileId)) {
+      fetchFiles();
+      if (selectedFileUrl && selectedFileUrl.includes(fileName)) {
         setSelectedFileUrl(null);
         setSelectedFileType('');
       }
@@ -70,19 +63,23 @@ const SidePanel = ({ onTextExtracted, userId }) => {
       toast.error("Failed to delete file");
     }
   };
+  
 
-  const fetchFiles = async () => {
-    if (!userId) return;
-    try {
-      const res = await axios.get(`${baseUrl}/api/files`, {
-        params: { user_id: userId },
-      });
-      setFilesList(res.data);
-    } catch (error) {
-      console.error('❌ Fetch error:', error);
-      toast.error('Failed to fetch files.');
-    }
-  };
+ // fetchFiles()
+const fetchFiles = async () => {
+  if (!userId) return;
+  try {
+    const res = await axios.get(`${baseUrl}/api/files`, {
+      params: { user_id: userId },
+    });
+    // Ensure it's always an array
+    setFilesList(Array.isArray(res.data) ? res.data : res.data.files || []);
+  } catch (error) {
+    console.error('❌ Fetch error:', error);
+    toast.error('Failed to fetch files.');
+  }
+};
+
   // const handleFileClick = (fileItem) => {
   //   const fileUrl = fileItem.url; // Cloudinary URL stored in Firestore
   //   setSelectedFileUrl(fileUrl);
@@ -90,10 +87,11 @@ const SidePanel = ({ onTextExtracted, userId }) => {
   // };
   
   const handleFileClick = (fileItem) => {
-    const fileUrl = `${baseUrl}/storage/${fileItem.path}`;
-    setSelectedFileUrl(fileUrl);
-    setSelectedFileType(fileItem.filename.split('.').pop().toLowerCase());
+    setSelectedFileUrl(fileItem.url);
+    setSelectedFileType(fileItem.name.split('.').pop().toLowerCase()); // ✅ fixed
   };
+  
+  
 
   const saveExtractedText = async (textToSave) => {
     if (!userId || !textToSave) return; // Ensure userId and text are present
@@ -288,35 +286,54 @@ const SidePanel = ({ onTextExtracted, userId }) => {
           color: '#000',
         }}
       >
-        {filesList.length === 0 ? (
-          <li style={{ color: '#888', fontSize: '12px' }}>No files uploaded yet.</li>
-        ) : (
-          filesList.map((fileItem) => (
-            <li key={fileItem.id} style={{ marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button
-                onClick={() => handleFileClick(fileItem)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#010141',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  textAlign: 'left',
-                  flex: 1,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-                title={fileItem.filename}
-              >
-                {fileItem.filename}
-              </button>
-              <button onClick={() => handleDelete(fileItem.id)} style={{ color: 'red', fontSize: '12px', border: 'none', background: 'none', marginLeft: '8px', cursor: 'pointer' }}>
-                🗑
-              </button>
-            </li>
-          ))
-        )}
+        {Array.isArray(filesList) && filesList.length > 0 ? (
+  filesList.map((fileItem) => (
+    <li
+      key={fileItem.id}
+      style={{
+        marginBottom: '6px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}
+    >
+      <button
+        onClick={() => handleFileClick(fileItem)}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: '#010141',
+          cursor: 'pointer',
+          fontSize: '13px',
+          textAlign: 'left',
+          flex: 1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+        title={fileItem.name}
+      >
+        {fileItem.name}
+      </button>
+      <button
+onClick={() => handleDelete(fileItem.name)}
+style={{
+          color: 'red',
+          fontSize: '12px',
+          border: 'none',
+          background: 'none',
+          marginLeft: '8px',
+          cursor: 'pointer',
+        }}
+      >
+        🗑
+      </button>
+    </li>
+  ))
+) : (
+  <li style={{ color: '#888', fontSize: '12px' }}>No files uploaded yet.</li>
+)}
+
       </ul>
       {selectedFileUrl && (
         <div style={{ marginTop: '20px' }}>

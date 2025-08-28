@@ -31,13 +31,7 @@ const teacherRoutes = require('./routes/getTeachers');
 const deleteTeacherRoute = require('./routes/deleteTeacher');
 const fileRoutes = require('./routes/fileRoutes');
 
-//cloudiary:
-// const cloudinaryUploadRoute = require('./routes/cloudinaryUpload');
-
 const app = express();
-
-
-
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -46,8 +40,7 @@ const io = new Server(server, {
 });
 const whiteboardStates = {};
 
-// ✅ Corrected server.js code
-// ✅ Corrected server.js code
+
 io.on('connection', (socket) => {
 
   socket.on('join-room', (roomName) => {
@@ -91,7 +84,8 @@ io.on('connection', (socket) => {
   });
 });
 
-const uploadDir = path.join(__dirname, 'uploads');
+// const uploadDir = path.join(__dirname, 'uploads');
+
 const recordingsDir = path.join(__dirname, 'recordings');
 const extractedTextRoutes = require('./routes/extractedText');
 // ✅ Multer config must come BEFORE upload is used
@@ -127,7 +121,7 @@ app.use('/api', extractedTextRoutes); // The base path must match your frontend
 
 // ✅ Serve static recordings and uploads
 app.use('/recordings', express.static(recordingsDir));
-app.use('/storage', express.static(uploadDir));
+// app.use('/storage', express.static(uploadDir));
 app.use(require('./routes/delete'));
 
 // ✅ Mount custom routes
@@ -135,9 +129,6 @@ app.use('/api', fileRoutes);
 app.use('/api/create-teacher', createTeacherRoute);
 app.use('/api', teacherRoutes);
 app.use('/api/teacher', deleteTeacherRoute);
-
-//Cloudinary
-// app.use('/api', cloudinaryUploadRoute);
 
 
 app.post('/api/upload-recording', upload.single('file'), (req, res) => {
