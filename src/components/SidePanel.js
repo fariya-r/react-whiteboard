@@ -41,8 +41,8 @@ const SidePanel = ({ onTextExtracted, userId }) => {
         },
       });
       toast.success('File uploaded successfully!');
-      setFile(null); // Clear the selected file after upload
-      fetchFiles(); // Refresh the file list
+      setFile(null); 
+      fetchFiles(); 
     } catch (error) {
       console.error("❌ Upload error:", error);
       toast.error('Upload failed. See console for details.');
