@@ -88,7 +88,7 @@ const fetchFiles = async () => {
   
   const handleFileClick = (fileItem) => {
     setSelectedFileUrl(fileItem.url);
-    setSelectedFileType(fileItem.name.split('.').pop().toLowerCase()); // ✅ fixed
+    setSelectedFileType(fileItem.filename.split('.').pop().toLowerCase()); // ✅ fixed
   };
   
   
@@ -311,12 +311,12 @@ const fetchFiles = async () => {
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
         }}
-        title={fileItem.name}
+        title={fileItem.filename}
       >
-        {fileItem.name}
+        {fileItem.filename}
       </button>
       <button
-onClick={() => handleDelete(fileItem.name)}
+onClick={() => handleDelete(fileItem.filename)}
 style={{
           color: 'red',
           fontSize: '12px',
