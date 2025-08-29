@@ -607,7 +607,6 @@ const WhiteboardActivity = () => {
                     className="cursor-crosshair"
                 />
 
-                {/* Render shapes over canvas */}
                 {shapes.map((shape) => (
                     <Shape
                         key={shape.id}

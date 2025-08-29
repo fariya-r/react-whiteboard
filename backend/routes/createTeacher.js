@@ -7,14 +7,12 @@ router.post('/', async (req, res) => {
   const { email, password, name } = req.body;
 
   try {
-    // 1. Create user
     const userRecord = await auth.createUser({
       email,
       password,
       displayName: name,
     });
 
-    // 2. Set custom claim
     await auth.setCustomUserClaims(userRecord.uid, { role: 'teacher' });
 
     // 🔁 3. Refresh user (important step)
