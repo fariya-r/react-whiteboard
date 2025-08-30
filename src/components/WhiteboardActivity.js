@@ -90,7 +90,10 @@ const WhiteboardActivity = () => {
     const [protractorHandle, setProtractorHandle] = useState({ x: 250, y: 0 });
     const [protractorRadius, setProtractorRadius] = useState(250);
     const [activeTouches, setActiveTouches] = useState({});
-
+    const [offset, setOffset] = useState({ x: 0, y: 0 });
+    const isPanning = useRef(false);
+    const lastPos = useRef({ x: 0, y: 0 });
+    
     useEffect(() => {
         const load = async () => {
             if (!whiteboardId) return;
@@ -176,20 +179,24 @@ const WhiteboardActivity = () => {
         setTool(selectedShape);
         setIsShapesMenuOpen(false);
     };
-
+    const toWorldCoords = (clientX, clientY) => {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = (clientX - rect.left - offset.x) / scale;
+        const y = (clientY - rect.top - offset.y) / scale;
+        return { x, y };
+      };
+      
     const handleCanvasClick = (e) => {
         if (!tool) return; // only block if no tool is selected
         if (!canvasRef.current) return;
 
-        const rect = canvasRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const { x, y } = toWorldCoords(e.clientX, e.clientY);
 
         const newShape = {
             id: uuidv4(),
             type: tool,
-            x: x - 50, // center the shape at click
-            y: y - 50, // center the shape at click
+            x: x - 50,
+            y: y - 50,
             width: 100,
             height: 100,
             color: "lightblue",
@@ -241,7 +248,8 @@ const WhiteboardActivity = () => {
         handleUpdateStickyNoteSize,
         protractorPosition,
         finalizeAngle,
-        drawCircleOnCanvas
+        drawCircleOnCanvas,
+        handleWheel
 
 
     } = useCanvasDrawing(
@@ -371,8 +379,8 @@ const WhiteboardActivity = () => {
     useEffect(() => {
         if (canvasRef.current) {
             contextRef.current = canvasRef.current.getContext('2d');
-            canvasRef.current.width = 3000;
-            canvasRef.current.height = 3000;
+            canvasRef.current.width = window.innerWidth;
+       canvasRef.current.height = window.innerHeight;
             contextRef.current.lineCap = 'round';
             contextRef.current.lineJoin = 'round';
         }
@@ -558,7 +566,7 @@ const WhiteboardActivity = () => {
             ))}
 
             {isPanelOpen && (
-                <div className="w-[300px] h-full overflow-y-auto bg-white shadow-lg z-10" style={{ position: 'relative' }}>
+                <div className="w-[400px] h-full overflow-y-auto bg-white shadow-lg z-10" style={{ position: 'relative' }}>
                     <SidePanel
                         onTextExtracted={handleExtractedText}
                         ocrText={extractedTextState}
@@ -587,6 +595,9 @@ const WhiteboardActivity = () => {
                         top: 0,
                         left: 0,
                     }}
+                    width={window.innerWidth}
+                    height={window.innerHeight}
+                    onWheel={handleWheel}
                     onTouchStart={handleTouchStart}
   onTouchMove={handleTouchMove}
   onTouchEnd={handleTouchEnd}

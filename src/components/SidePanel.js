@@ -208,7 +208,7 @@ const fetchFiles = async () => {
   return (
     <div
       style={{
-        width: '320px',
+        width: '340px',
         backgroundColor: '#010141',
         borderRight: '1px solid #ccc',
         padding: '16px',
@@ -220,23 +220,47 @@ const fetchFiles = async () => {
         color: '#fff',
         borderTopRightRadius: '16px',
         borderBottomRightRadius: '16px',
+        overflow: 'hidden', // This is crucial to prevent the main panel from creating its own scrollbar
+        maxWidth: '100%', // Ensures the panel doesn't exceed the width of its parent
       }}
     >
       <h4 style={{ marginBottom: '10px', fontSize: '18px', color: '#ffffff' }}>
         Attach File
       </h4>
-      <input
-        type="file"
-        onChange={handleFileChange}
+
+      <label
+        htmlFor="file-upload"
         style={{
-          fontSize: '12px',
-          marginBottom: '10px',
+          display: 'block',
+          width: '100%',
+          padding: '6px 12px',
           backgroundColor: '#fff',
           color: '#000',
           borderRadius: '4px',
-          padding: '4px',
+          fontSize: '13px',
+          textAlign: 'center',
+          cursor: 'pointer',
+          marginBottom: '10px',
+          border: '1px solid #ccc',
+        }}
+      >
+        Choose File
+      </label>
+      <input
+        id="file-upload"
+        type="file"
+        onChange={handleFileChange}
+        style={{
+          display: 'none',
         }}
       />
+      
+      {file && (
+        <p style={{ fontSize: '12px', color: '#ccc', marginBottom: '10px' }}>
+          Selected: {file.name}
+        </p>
+      )}
+
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
         <button
           onClick={handleUpload}
@@ -277,64 +301,65 @@ const fetchFiles = async () => {
       <ul
         style={{
           listStyle: 'none',
-          padding: 0,
-          maxHeight: '250px',
-          overflowY: 'auto',
+          padding: '6px 10px',
           backgroundColor: '#ffffff',
           borderRadius: '6px',
-          padding: '6px 10px',
           color: '#000',
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
         }}
       >
         {Array.isArray(filesList) && filesList.length > 0 ? (
-  filesList.map((fileItem) => (
-    <li
-      key={fileItem.id}
-      style={{
-        marginBottom: '6px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}
-    >
-      <button
-        onClick={() => handleFileClick(fileItem)}
-        style={{
-          background: 'none',
-          border: 'none',
-          color: '#010141',
-          cursor: 'pointer',
-          fontSize: '13px',
-          textAlign: 'left',
-          flex: 1,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-        title={fileItem.filename}
-      >
-        {fileItem.filename}
-      </button>
-      <button
-onClick={() => handleDelete(fileItem.filename)}
-style={{
-          color: 'red',
-          fontSize: '12px',
-          border: 'none',
-          background: 'none',
-          marginLeft: '8px',
-          cursor: 'pointer',
-        }}
-      >
-        🗑
-      </button>
-    </li>
-  ))
-) : (
-  <li style={{ color: '#888', fontSize: '12px' }}>No files uploaded yet.</li>
-)}
-
+          filesList.map((fileItem, index) => (
+            <li
+              key={fileItem.id || index}
+              style={{
+                marginBottom: '6px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '6px',
+                wordBreak: 'break-all',
+              }}
+            >
+              <button
+                onClick={() => handleFileClick(fileItem)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#010141',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  textAlign: 'left',
+                  flex: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                title={fileItem.filename}
+              >
+                {fileItem.filename}
+              </button>
+              <button
+                onClick={() => handleDelete(fileItem.filename)}
+                style={{
+                  color: 'red',
+                  fontSize: '12px',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                🗑
+              </button>
+            </li>
+          ))
+        ) : (
+          <li style={{ color: '#888', fontSize: '12px' }}>No files uploaded yet.</li>
+        )}
       </ul>
+  
       {selectedFileUrl && (
         <div style={{ marginTop: '20px' }}>
           <h5 style={{ fontSize: '14px', marginBottom: '8px' }}>Preview</h5>
