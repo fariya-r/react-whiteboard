@@ -162,10 +162,13 @@ app.get('/api/recordings', async (req, res) => {
 const buildPath = path.join(__dirname, 'build');
 if (fs.existsSync(buildPath)) {
   app.use(express.static(buildPath));
-  app.get('*', (req, res) => {
+
+  // Only serve React app for non-API routes
+  app.get(/^\/(?!api).*/, (req, res) => {
     res.sendFile(path.join(buildPath, 'index.html'));
   });
 }
+
 
 
 const PORT = process.env.PORT || 5000;
