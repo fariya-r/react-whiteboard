@@ -117,6 +117,8 @@ app.use(cors({
 app.use(express.json());
 app.use(bodyParser.json({ limit: '20mb' }));
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use('/api', fileRoutes);
+
 app.use('/api', extractedTextRoutes); // The base path must match your frontend
 
 // ✅ Serve static recordings and uploads
@@ -125,13 +127,13 @@ app.use('/recordings', express.static(recordingsDir));
 app.use(require('./routes/delete'));
 
 // ✅ Mount custom routes
-app.use('/api', fileRoutes);
 app.use('/api/create-teacher', createTeacherRoute);
 app.use('/api', teacherRoutes);
 app.use('/api/teacher', deleteTeacherRoute);
 
 
 app.post('/api/upload-recording', upload.single('file'), (req, res) => {
+  console.log("📥 Upload route hit on Railway!");
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
