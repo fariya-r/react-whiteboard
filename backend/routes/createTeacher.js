@@ -15,7 +15,6 @@ router.post('/', async (req, res) => {
 
     await auth.setCustomUserClaims(userRecord.uid, { role: 'teacher' });
 
-    // 🔁 3. Refresh user (important step)
     const updatedUser = await auth.getUser(userRecord.uid);
 
     // 4. Save in Firestore
