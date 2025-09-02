@@ -5,8 +5,10 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { extractTextFromBase64Data } from '../utils/ocrHelper'; // Corrected import path
 import { fileToBase64, getFileType } from '../utils/fileUtils'; // Corrected import path
+import { supabase } from './supabaseClient';
 
 const SidePanel = ({ onTextExtracted, userId }) => {
+  console.log('User ID received:', userId);
   const [file, setFile] = useState(null);
   const [filesList, setFilesList] = useState([]);
   const [selectedFileUrl, setSelectedFileUrl] = useState(null);
@@ -14,7 +16,6 @@ const SidePanel = ({ onTextExtracted, userId }) => {
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
   const [extractedText, setExtractedText] = useState('');
-  // const [text, setText] = useState(''); // This state variable is not used and can be removed
 
   const handleFileChange = (event) => {
     const selected = event.target.files[0];
@@ -23,75 +24,123 @@ const SidePanel = ({ onTextExtracted, userId }) => {
   };
 
   const handleUpload = async () => {
-    if (!userId) {
-      toast.error("User ID not found. Please log in.");
+    if (!file || !userId) {
+      toast.error("Please select a file and login first");
       return;
     }
-    if (!file) {
-      toast.error("No file selected for upload.");
-      return;
-    }
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('user_id', userId);
+  
     try {
-      const response = await axios.post(`${baseUrl}/api/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      // 1. Upload file via backend
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("user_id", userId);
+  
+      const res = await axios.post(`${baseUrl}/api/upload`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-      toast.success('File uploaded successfully!');
-      setFile(null); 
-      fetchFiles(); 
-    } catch (error) {
-      console.error("❌ Upload error:", error);
-      toast.error('Upload failed. See console for details.');
+  
+      if (!res.data || !res.data.filePath) {
+        throw new Error("Upload failed at backend");
+      }
+  
+      const filePath = res.data.filePath;
+  
+      // 2. Insert metadata into user_files table
+      const { data: insertedFile, error: insertError } = await supabase
+        .from("user_files")
+        .insert([
+          {
+            user_id: userId,
+            file_path: filePath,
+            created_at: new Date(),
+          },
+        ])
+        .select();
+  
+      if (insertError) throw insertError;
+  
+      toast.success("File uploaded successfully!");
+      setFile(null);
+  
+      // Refresh file list
+      fetchFiles(userId);
+    } catch (err) {
+      console.error("❌ Upload error:", err.message);
+      toast.error("Upload failed");
     }
   };
-
-  const handleDelete = async (fileName) => {
+  
+  const handleDelete = async (filePath) => {
+    if (!userId) {
+      toast.error("User ID not found. Cannot delete file.");
+      return;
+    }
     try {
-      await axios.delete(`${baseUrl}/api/files/${fileName}`);
+      // 1. Delete from storage via backend
+      await axios.delete(`${baseUrl}/api/files/${encodeURIComponent(filePath)}`);
+  
+      // 2. Delete from DB
+      const { error: dbError } = await supabase
+        .from("user_files")
+        .delete()
+        .eq("file_path", filePath)
+        .eq("user_id", userId);
+  
+      if (dbError) throw dbError;
+  
       toast.success("File deleted successfully");
-      fetchFiles();
-      if (selectedFileUrl && selectedFileUrl.includes(fileName)) {
-        setSelectedFileUrl(null);
-        setSelectedFileType('');
-      }
+      fetchFiles(userId);
     } catch (error) {
       console.error("❌ Delete error:", error);
       toast.error("Failed to delete file");
     }
   };
   
+const fetchFiles = async (uid) => {
+  if (!uid) return;
 
- // fetchFiles()
-const fetchFiles = async () => {
-  if (!userId) return;
-  try {
-    const res = await axios.get(`${baseUrl}/api/files`, {
-      params: { user_id: userId },
-    });
-    // Ensure it's always an array
-    setFilesList(Array.isArray(res.data) ? res.data : res.data.files || []);
-  } catch (error) {
-    console.error('❌ Fetch error:', error);
-    toast.error('Failed to fetch files.');
+  console.log("Fetching files for:", uid);
+
+  const { data, error } = await supabase
+    .from("user_files")
+    .select("*")
+    .eq("user_id", uid);
+
+  if (error) {
+    console.error("❌ Fetch error:", error.message);
+    return;
   }
+
+  // Generate public URLs
+  const filesWithUrls = data.map((file) => {
+    const { data: urlData } = supabase.storage
+      .from("user-files")
+      .getPublicUrl(file.file_path);
+
+    return {
+      ...file,
+      url: urlData.publicUrl,
+    };
+  });
+
+  console.log("✅ Files fetched with URLs:", filesWithUrls);
+  setFilesList(filesWithUrls);
 };
 
-  // const handleFileClick = (fileItem) => {
-  //   const fileUrl = fileItem.url; // Cloudinary URL stored in Firestore
-  //   setSelectedFileUrl(fileUrl);
-  //   setSelectedFileType(fileItem.filename.split('.').pop().toLowerCase());
-  // };
-  
-  const handleFileClick = (fileItem) => {
-    setSelectedFileUrl(fileItem.url);
-    setSelectedFileType(fileItem.filename.split('.').pop().toLowerCase()); // ✅ fixed
-  };
-  
-  
+
+useEffect(() => {
+  if (userId) {
+    fetchFiles(userId);
+  }
+}, [userId]);
+
+
+
+const handleFileClick = (fileItem) => {
+  setSelectedFileUrl(fileItem.url);
+  setSelectedFileType(fileItem.file_path.split('.').pop().toLowerCase()); // ✅ fixed
+};
+
 
   const saveExtractedText = async (textToSave) => {
     if (!userId || !textToSave) return; // Ensure userId and text are present
@@ -139,11 +188,7 @@ const fetchFiles = async () => {
       toast.warn("Please select a file using 'Choose File' button to perform OCR.");
       return;
     }
-
-    // Create a local copy of the file to prevent state changes from interfering
     const fileToProcess = file;
-
-    // Determine the file type for OCR processing
     const type = getFileType(fileToProcess); // This will return 'image' or 'pdf'
 
     if (type !== 'image' && type !== 'pdf') {
@@ -155,11 +200,8 @@ const fetchFiles = async () => {
     toast.info("Processing OCR...");
 
     try {
-      // Convert the file to a base64 data URL
       const base64Data = await fileToBase64(fileToProcess);
-      
-      // Call the updated OCR helper function, passing both data and type
-      const extractedTextResult = await extractTextFromBase64Data(base64Data, type);
+            const extractedTextResult = await extractTextFromBase64Data(base64Data, type);
 
       if (extractedTextResult) {
         setExtractedText(extractedTextResult);
@@ -174,36 +216,29 @@ const fetchFiles = async () => {
       toast.error(`OCR failed: ${error.message}. Check browser console and backend logs.`);
     } finally {
       setIsProcessingOCR(false);
-      // Clear the file input and state after processing, regardless of success or failure
       setFile(null);
       document.querySelector('input[type="file"]').value = '';
     }
   };
 
-  // Effect to fetch files when userId changes (e.g., on login/logout)
-  useEffect(() => {
-    fetchFiles();
-  }, [userId]);
+ 
 
-  // Effect to load previously extracted text when the component mounts or userId changes
   useEffect(() => {
     fetchExtractedText();
   }, [userId]);
 
   // Effect to debounce saving of edited extracted text
   useEffect(() => {
-    // Only save if extractedText is not empty (i.e., there's something to save)
     if (extractedText) {
       const handler = setTimeout(() => {
         saveExtractedText(extractedText);
       }, 1000); // Wait 1 second after the user stops typing before saving
-
-      // Cleanup function: clear the timeout if the component unmounts or extractedText changes again
       return () => {
         clearTimeout(handler);
       };
     }
-  }, [extractedText, userId]); // Re-run when extractedText or userId changes
+  }, [extractedText, userId]);   
+
 
   return (
     <div
@@ -337,12 +372,12 @@ const fetchFiles = async () => {
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                 }}
-                title={fileItem.filename}
+                title={fileItem.file_path}
               >
-                {fileItem.filename}
+{fileItem.file_path.split('/').pop()} 
               </button>
               <button
-                onClick={() => handleDelete(fileItem.filename)}
+                onClick={() => handleDelete(fileItem.file_path)}
                 style={{
                   color: 'red',
                   fontSize: '12px',

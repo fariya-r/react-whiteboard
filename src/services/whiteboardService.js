@@ -32,7 +32,8 @@ export const saveWhiteboard = async (
   ocrText,
   stickyNotes,
   backgroundColor,
-  circles
+  circles,
+  label
 
 ) => {
   const auth = getAuth();
@@ -56,7 +57,7 @@ export const saveWhiteboard = async (
     createdByName: user.displayName || "Unknown",
     createdByEmail: user.email || "",
         circles: circles || [],
-
+        label: label || "Untagged", 
   });
 
   return docRef.id;
@@ -92,7 +93,8 @@ export const updateWhiteboard = async (
   ocrText,
   stickyNotes,
   backgroundColor,
-  circles
+  circles,
+  label
 ) => {
   const auth = getAuth();
   const user = auth.currentUser;
@@ -112,6 +114,8 @@ export const updateWhiteboard = async (
     backgroundColor: backgroundColor || "#ffffff",
     updatedAt: new Date(),  
     circles: circles || [],
+    label: label || "Untagged", 
+
    // 👈 createdAt ki jagah updatedAt rakho
   });
 };

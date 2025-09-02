@@ -28,7 +28,7 @@ import ShapeRenderer from "../components/ShapeRenderer";
 import Protractor from "../components/Protractor";
 import MeasurementToolsMenu from "../components/MeasurementToolsMenu";
 import Compass from './Compass';
-
+import { supabase } from './supabaseClient';
 
 const WhiteboardActivity = () => {
     const canvasRef = useRef(null);
@@ -36,7 +36,7 @@ const WhiteboardActivity = () => {
     const contextRef = useRef(null);
     const [mediaFiles, setMediaFiles] = useState([]);
     const [selectedBoardId, setSelectedBoardId] = useState(null);
-    const [userId, setUserId] = useState([]);
+    const [userId, setUserId] = useState(null);
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [fileUrls, setFileUrls] = useState([]);
     const [ocrTextBoxes, setOcrTextBoxes] = useState([]);
@@ -90,10 +90,7 @@ const WhiteboardActivity = () => {
     const [protractorHandle, setProtractorHandle] = useState({ x: 250, y: 0 });
     const [protractorRadius, setProtractorRadius] = useState(250);
     const [activeTouches, setActiveTouches] = useState({});
-    const [offset, setOffset] = useState({ x: 0, y: 0 });
-    const isPanning = useRef(false);
-    const lastPos = useRef({ x: 0, y: 0 });
-    
+
     useEffect(() => {
         const load = async () => {
             if (!whiteboardId) return;
@@ -179,24 +176,20 @@ const WhiteboardActivity = () => {
         setTool(selectedShape);
         setIsShapesMenuOpen(false);
     };
-    const toWorldCoords = (clientX, clientY) => {
-        const rect = canvasRef.current.getBoundingClientRect();
-        const x = (clientX - rect.left - offset.x) / scale;
-        const y = (clientY - rect.top - offset.y) / scale;
-        return { x, y };
-      };
-      
+
     const handleCanvasClick = (e) => {
         if (!tool) return; // only block if no tool is selected
         if (!canvasRef.current) return;
 
-        const { x, y } = toWorldCoords(e.clientX, e.clientY);
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
         const newShape = {
             id: uuidv4(),
             type: tool,
-            x: x - 50,
-            y: y - 50,
+            x: x - 50, // center the shape at click
+            y: y - 50, // center the shape at click
             width: 100,
             height: 100,
             color: "lightblue",
@@ -217,19 +210,36 @@ const WhiteboardActivity = () => {
         setShapes(prev => prev.filter(s => s.id !== id));
     };
 
+    // useEffect(() => {
+    //     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    //         setUser(currentUser);
+    //         setResolved(true);
+    //         if (!currentUser) {
+    //             alert('Please log in to access whiteboards.');
+    //         }
+    //     });
+    //     return () => unsubscribe();
+    // }, [auth]);
+    // In your main component (e.g., App.js)
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          if (firebaseUser) {
+            const idToken = await firebaseUser.getIdToken();
+            await supabase.auth.signInWithIdToken({ provider: 'firebase', token: idToken });
+            
+            setUser(firebaseUser);   // ✅ Add back
+            setUserId(firebaseUser.uid);
             setResolved(true);
-            if (!currentUser) {
-                alert('Please log in to access whiteboards.');
-            }
+          } else {
+            await supabase.auth.signOut();
+            setUser(null);           // ✅ Reset user
+            setUserId(null);
+          }
         });
+      
         return () => unsubscribe();
-    }, [auth]);
-
-
-
+      }, [auth]);
+      
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -248,8 +258,7 @@ const WhiteboardActivity = () => {
         handleUpdateStickyNoteSize,
         protractorPosition,
         finalizeAngle,
-        drawCircleOnCanvas,
-        handleWheel
+        drawCircleOnCanvas
 
 
     } = useCanvasDrawing(
@@ -379,8 +388,8 @@ const WhiteboardActivity = () => {
     useEffect(() => {
         if (canvasRef.current) {
             contextRef.current = canvasRef.current.getContext('2d');
-            canvasRef.current.width = window.innerWidth;
-       canvasRef.current.height = window.innerHeight;
+            canvasRef.current.width = 3000;
+            canvasRef.current.height = 3000;
             contextRef.current.lineCap = 'round';
             contextRef.current.lineJoin = 'round';
         }
@@ -479,7 +488,8 @@ const WhiteboardActivity = () => {
     
         // ✅ Current background color
         const currentBackgroundColor = canvas.style.backgroundColor || "#ffffff";
-    
+        const label = prompt("Enter lesson tag/label (e.g., Class 9 - Math)", "Untagged");
+
         // ✅ Firestore update or save
         if (currentBoardId) {
             await updateWhiteboard(
@@ -494,7 +504,8 @@ const WhiteboardActivity = () => {
                 ocrText,
                 stickyNotes || [],
                 currentBackgroundColor,
-                circles || [] 
+                circles || [],
+                label
             );
         } else {
             const newId = await saveWhiteboard(
@@ -508,7 +519,8 @@ const WhiteboardActivity = () => {
                 ocrText,
                 stickyNotes || [],
                 currentBackgroundColor,
-                circles || [] 
+                circles || [],
+                label
             );
             setCurrentBoardId(newId);
         }
@@ -570,7 +582,8 @@ const WhiteboardActivity = () => {
                     <SidePanel
                         onTextExtracted={handleExtractedText}
                         ocrText={extractedTextState}
-                        userId={isAdminView ? teacherUid : user?.uid}
+                        userId={userId}
+                        // userId={isAdminView ? teacherUid : user?.uid}
                     />
                 </div>
             )}
@@ -595,9 +608,6 @@ const WhiteboardActivity = () => {
                         top: 0,
                         left: 0,
                     }}
-                    width={window.innerWidth}
-                    height={window.innerHeight}
-                    onWheel={handleWheel}
                     onTouchStart={handleTouchStart}
   onTouchMove={handleTouchMove}
   onTouchEnd={handleTouchEnd}
@@ -724,31 +734,37 @@ const WhiteboardActivity = () => {
                             }}
                         >
                             {savedBoards.map((board, index) => (
-                                <div key={index} className="mb-4 bg-white rounded-lg overflow-hidden shadow text-black">
-                                    <img
-                                        src={board.snapshot}
-                                        alt={`Whiteboard ${index + 1}`}
-                                        onClick={() => loadBoard(board)}
-                                        className="w-full h-auto cursor-pointer rounded-t-lg"
-                                    />
-                                    <div className="flex justify-between items-center px-2 py-1 bg-blue-500 text-white text-xs rounded-b-lg">
-                                        <span className="truncate">{board.createdAt?.toDate?.().toLocaleString() || 'Unknown'}</span>
-                                        <button
-                                            onClick={async () => {
-                                                const confirmDelete = window.confirm('Delete this whiteboard?');
-                                                if (confirmDelete) {
-                                                    await deleteWhiteboard(board.id);
-                                                    setSavedBoards(prev => prev.filter(b => b.id !== board.id));
-                                                }
-                                            }}
-                                            className="hover:text-red-200"
-                                            title="Delete"
-                                        >
-                                            🗑️
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
+  <div key={index} className="mb-4 bg-white rounded-lg overflow-hidden shadow text-black">
+    {/* 👇 Tag/Label */}
+    <div className="bg-green-500 text-white text-xs px-2 py-1 font-semibold">
+      {board.label || "Untagged"}
+    </div>
+
+    <img
+      src={board.snapshot}
+      alt={`Whiteboard ${index + 1}`}
+      onClick={() => loadBoard(board)}
+      className="w-full h-auto cursor-pointer"
+    />
+
+    <div className="flex justify-between items-center px-2 py-1 bg-blue-500 text-white text-xs">
+      <span className="truncate">{board.createdAt?.toDate?.().toLocaleString() || 'Unknown'}</span>
+      <button
+        onClick={async () => {
+          const confirmDelete = window.confirm('Delete this whiteboard?');
+          if (confirmDelete) {
+            await deleteWhiteboard(board.id);
+            setSavedBoards(prev => prev.filter(b => b.id !== board.id));
+          }
+        }}
+        className="hover:text-red-200"
+      >
+        🗑️
+      </button>
+    </div>
+  </div>
+))}
+
                         </div>
                     </div>
                 )
