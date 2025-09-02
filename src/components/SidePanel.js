@@ -23,71 +23,48 @@ const SidePanel = ({ onTextExtracted, userId }) => {
     setFile(selected);
   };
 
-  const handleUpload = async () => {
-    if (!file || !userId) {
-      toast.error("Please select a file and login first");
-      return;
-    }
-  
-    try {
-      // 1. Upload file via backend
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("user_id", userId);
-  
-      const res = await axios.post(`${baseUrl}/api/upload`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+ // 📂 Upload directly to Supabase
+const handleUpload = async () => {
+  if (!file || !userId) {
+    toast.error("Please select a file and login first");
+    return;
+  }
+
+  try {
+    const filePath = `${userId}/${file.name}`;
+
+    // Upload file to Supabase bucket
+    const { data, error } = await supabase.storage
+      .from("user-files")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: true, // overwrite if file exists
       });
-  
-      if (!res.data || !res.data.filePath) {
-        throw new Error("Upload failed at backend");
-      }
-  
-      const filePath = res.data.filePath;
-  
-      // 2. Insert metadata into user_files table
-      const { data: insertedFile, error: insertError } = await supabase
-        .from("user_files")
-        .insert([
-          {
-            user_id: userId,
-            file_path: filePath,
-            created_at: new Date(),
-          },
-        ])
-        .select();
-  
-      if (insertError) throw insertError;
-  
-      toast.success("File uploaded successfully!");
-      setFile(null);
-  
-      // Refresh file list
-      fetchFiles(userId);
-    } catch (err) {
-      console.error("❌ Upload error:", err.message);
-      toast.error("Upload failed");
+
+    if (error) {
+      throw error;
     }
-  };
-  
+
+    toast.success("File uploaded successfully!");
+    setFile(null);
+
+    // ✅ Refresh file list
+    fetchFiles(userId);
+  } catch (err) {
+    console.error("❌ Upload error:", err.message);
+    toast.error("Upload failed: " + err.message);
+  }
+};
+
+
+  // 🗑 Delete
   const handleDelete = async (filePath) => {
     if (!userId) {
       toast.error("User ID not found. Cannot delete file.");
       return;
     }
     try {
-      // 1. Delete from storage via backend
       await axios.delete(`${baseUrl}/api/files/${encodeURIComponent(filePath)}`);
-  
-      // 2. Delete from DB
-      const { error: dbError } = await supabase
-        .from("user_files")
-        .delete()
-        .eq("file_path", filePath)
-        .eq("user_id", userId);
-  
-      if (dbError) throw dbError;
-  
       toast.success("File deleted successfully");
       fetchFiles(userId);
     } catch (error) {
@@ -95,51 +72,66 @@ const SidePanel = ({ onTextExtracted, userId }) => {
       toast.error("Failed to delete file");
     }
   };
-  
-const fetchFiles = async (uid) => {
-  if (!uid) return;
 
-  console.log("Fetching files for:", uid);
+  // 📂 Fetch
+  const fetchFiles = async (uid) => {
+    if (!uid) return;
 
-  const { data, error } = await supabase
-    .from("user_files")
-    .select("*")
-    .eq("user_id", uid);
+    console.log("Fetching files for:", uid);
 
-  if (error) {
-    console.error("❌ Fetch error:", error.message);
-    return;
-  }
-
-  // Generate public URLs
-  const filesWithUrls = data.map((file) => {
-    const { data: urlData } = supabase.storage
+    const { data, error } = await supabase
+      .storage
       .from("user-files")
-      .getPublicUrl(file.file_path);
+      .list(uid);
 
-    return {
-      ...file,
-      url: urlData.publicUrl,
-    };
-  });
+    if (error) {
+      console.error("❌ Fetch error:", error.message);
+      return;
+    }
 
-  console.log("✅ Files fetched with URLs:", filesWithUrls);
-  setFilesList(filesWithUrls);
-};
+    const filesWithUrls = await Promise.all(
+      data.map(async (file) => {
+        const { data: urlData } = await supabase.storage
+          .from("user-files")
+          .createSignedUrl(`${uid}/${file.name}`, 60 * 60); // 1 hour
+        return {
+          name: file.name, // ✅ always include
+          path: `${uid}/${file.name}`,
+          url: urlData.signedUrl,
+        };
+      })
+    );
+    
 
+    console.log("✅ Files fetched with URLs:", filesWithUrls);
+    setFilesList(filesWithUrls);
+  };
 
-useEffect(() => {
-  if (userId) {
-    fetchFiles(userId);
-  }
-}, [userId]);
+  // ✅ Call fetch on mount or when userId changes
+  useEffect(() => {
+    if (userId) {
+      fetchFiles(userId);
+    }
+  }, [userId]);
 
-
-
-const handleFileClick = (fileItem) => {
-  setSelectedFileUrl(fileItem.url);
-  setSelectedFileType(fileItem.file_path.split('.').pop().toLowerCase()); // ✅ fixed
-};
+   
+  const handleFileClick = (fileItem) => {
+    setSelectedFileUrl(fileItem.url);
+  
+    // Get file extension
+    const ext = fileItem.name.split('.').pop().toLowerCase();
+  
+    if (['jpg', 'jpeg', 'png'].includes(ext)) {
+      setSelectedFileType('image');
+    } else if (ext === 'pdf') {
+      setSelectedFileType('pdf');
+    } else {
+      setSelectedFileType('unknown');
+    }
+  };
+    
+  
+  
 
 
   const saveExtractedText = async (textToSave) => {
@@ -201,7 +193,7 @@ const handleFileClick = (fileItem) => {
 
     try {
       const base64Data = await fileToBase64(fileToProcess);
-            const extractedTextResult = await extractTextFromBase64Data(base64Data, type);
+      const extractedTextResult = await extractTextFromBase64Data(base64Data, type);
 
       if (extractedTextResult) {
         setExtractedText(extractedTextResult);
@@ -221,7 +213,7 @@ const handleFileClick = (fileItem) => {
     }
   };
 
- 
+
 
   useEffect(() => {
     fetchExtractedText();
@@ -237,7 +229,7 @@ const handleFileClick = (fileItem) => {
         clearTimeout(handler);
       };
     }
-  }, [extractedText, userId]);   
+  }, [extractedText, userId]);
 
 
   return (
@@ -289,7 +281,7 @@ const handleFileClick = (fileItem) => {
           display: 'none',
         }}
       />
-      
+
       {file && (
         <p style={{ fontSize: '12px', color: '#ccc', marginBottom: '10px' }}>
           Selected: {file.name}
@@ -358,24 +350,31 @@ const handleFileClick = (fileItem) => {
                 wordBreak: 'break-all',
               }}
             >
-              <button
-                onClick={() => handleFileClick(fileItem)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#010141',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  textAlign: 'left',
-                  flex: 1,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-                title={fileItem.file_path}
-              >
-{fileItem.file_path.split('/').pop()} 
-              </button>
+             <button
+  onClick={() => handleFileClick(fileItem)}
+  style={{
+    background: 'none',
+    border: 'none',
+    color: '#010141',
+    cursor: 'pointer',
+    fontSize: '13px',
+    textAlign: 'left',
+    flex: 1,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  }}
+  title={
+    fileItem.filename 
+      || fileItem.name 
+      || (fileItem.filePath ? fileItem.filePath.split('/').pop() : 'Unknown')
+  }  >
+   {fileItem.filename 
+    || fileItem.name 
+    || (fileItem.filePath ? fileItem.filePath.split('/').pop() : 'Unnamed File')}
+</button>
+
+
               <button
                 onClick={() => handleDelete(fileItem.file_path)}
                 style={{
@@ -394,46 +393,47 @@ const handleFileClick = (fileItem) => {
           <li style={{ color: '#888', fontSize: '12px' }}>No files uploaded yet.</li>
         )}
       </ul>
-  
+
       {selectedFileUrl && (
         <div style={{ marginTop: '20px' }}>
           <h5 style={{ fontSize: '14px', marginBottom: '8px' }}>Preview</h5>
-          {['jpg', 'jpeg', 'png'].includes(selectedFileType) ? (
-            <img
-              src={selectedFileUrl}
-              alt="Preview"
-              style={{
-                width: '100%',
-                maxHeight: '200px',
-                objectFit: 'contain',
-                borderRadius: '6px',
-                border: '1px solid #ccc',
-              }}
-            />
-          ) : selectedFileType === 'pdf' ? (
-            <iframe
-              src={selectedFileUrl}
-              width="100%"
-              height="260px"
-              title="PDF Preview"
-              style={{
-                border: '1px solid #ccc',
-                borderRadius: '6px',
-              }}
-            />
-          ) : (
-            <p style={{ fontSize: '12px', color: '#fff' }}>
-              Not previewable.{' '}
-              <a
-                href={selectedFileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: '#4A90E2', textDecoration: 'underline' }}
-              >
-                Download
-              </a>
-            </p>
-          )}
+          {selectedFileType === 'image' ? (
+  <img
+    src={selectedFileUrl}
+    alt="Preview"
+    style={{
+      width: '100%',
+      maxHeight: '200px',
+      objectFit: 'contain',
+      borderRadius: '6px',
+      border: '1px solid #ccc',
+    }}
+  />
+) : selectedFileType === 'pdf' ? (
+  <iframe
+    src={selectedFileUrl}
+    width="100%"
+    height="260px"
+    title="PDF Preview"
+    style={{
+      border: '1px solid #ccc',
+      borderRadius: '6px',
+    }}
+  />
+) : (
+  <p style={{ fontSize: '12px', color: '#fff' }}>
+    Not previewable.{' '}
+    <a
+      href={selectedFileUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ color: '#4A90E2', textDecoration: 'underline' }}
+    >
+      Download
+    </a>
+  </p>
+)}
+
         </div>
       )}
       {extractedText && (

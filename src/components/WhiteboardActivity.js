@@ -6,9 +6,9 @@ import useWhiteboardActions from '../hooks/useWhiteboardActions';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { io } from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
-import CanvasRecorder from '../components/CanvasRecorder';
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { db } from '../firebase/firebase';
+// import CanvasRecorder from '../components/CanvasRecorder';
+// import { ref, uploadString, getDownloadURL } from "firebase/storage";
+// import { db } from '../firebase/firebase';
 import RulerTool from '../components/RulerTool';
 import SidePanel from './SidePanel';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -29,6 +29,8 @@ import Protractor from "../components/Protractor";
 import MeasurementToolsMenu from "../components/MeasurementToolsMenu";
 import Compass from './Compass';
 import { supabase } from './supabaseClient';
+
+// HAND TOUCH DRAWING SAVE NI HO RHI USY DAIKHNA HA OKAY
 
 const WhiteboardActivity = () => {
     const canvasRef = useRef(null);
@@ -90,6 +92,7 @@ const WhiteboardActivity = () => {
     const [protractorHandle, setProtractorHandle] = useState({ x: 250, y: 0 });
     const [protractorRadius, setProtractorRadius] = useState(250);
     const [activeTouches, setActiveTouches] = useState({});
+    const [boardLabel, setBoardLabel] = useState(null);
 
     useEffect(() => {
         const load = async () => {
@@ -134,6 +137,32 @@ const WhiteboardActivity = () => {
         }
         setActiveTouches(newTouches);
     };
+    const handleEditLabel = () => {
+        const newLabel = prompt("Edit lesson tag/label:", boardLabel || "Untagged");
+        if (newLabel && newLabel.trim() !== "") {
+          setBoardLabel(newLabel);
+      
+          // Agar board already save hai → update karo
+          if (currentBoardId) {
+            updateWhiteboard(
+              currentBoardId,
+              backgroundSnapshot,   // ya last snapshot jo bhi ho
+              tool || "pencil",
+              color || "#000000",
+              lineWidth || 2,
+              textBoxes || [],
+              shapes || [],
+              fileUrls || [],
+              extractedTextState || '',
+              stickyNotes || [],
+              backgroundColor,
+              circles || [],
+              newLabel
+            );
+          }
+        }
+      };
+      
     
     const handleTouchMove = (e) => {
         e.preventDefault();
@@ -472,60 +501,58 @@ const WhiteboardActivity = () => {
 
     const handleSave = async () => {
         if (!user) {
-            alert('Please log in to save');
-            return;
+          alert('Please log in to save');
+          return;
         }
-    
+      
         const canvas = canvasRef.current;
-        const ocrText = extractedTextState || '';
-    
-        // ✅ Snapshot generate (background + textBoxes + stickyNotes + shapes + circles)
-        const dataUrl = await getSnapshotWithElements(
-
-            shapes,
-            circles
-        );
-    
-        // ✅ Current background color
+        if (!canvas) return;
+      
+        const dataUrl = await getSnapshotWithElements(shapes, circles);
+      
         const currentBackgroundColor = canvas.style.backgroundColor || "#ffffff";
-        const label = prompt("Enter lesson tag/label (e.g., Class 9 - Math)", "Untagged");
-
-        // ✅ Firestore update or save
-        if (currentBoardId) {
-            await updateWhiteboard(
-                currentBoardId,
-                dataUrl,
-                tool || "pencil",
-                color || "#000000",
-                lineWidth || 2,
-                textBoxes || [],
-                shapes || [],
-                fileUrls || [],
-                ocrText,
-                stickyNotes || [],
-                currentBackgroundColor,
-                circles || [],
-                label
-            );
-        } else {
-            const newId = await saveWhiteboard(
-                dataUrl,
-                tool || "pencil",
-                color || "#000000",
-                lineWidth || 2,
-                textBoxes || [],
-                shapes || [],
-                fileUrls || [],
-                ocrText,
-                stickyNotes || [],
-                currentBackgroundColor,
-                circles || [],
-                label
-            );
-            setCurrentBoardId(newId);
+        
+        // ✅ Prompt only if new board
+        let label = boardLabel;
+        if (!currentBoardId && !boardLabel) {
+          label = prompt("Enter lesson tag/label (e.g., Class 9 - Math)", "Untagged");
+          setBoardLabel(label);
         }
-    };
-    
+      
+        if (currentBoardId) {
+          await updateWhiteboard(
+            currentBoardId,
+            dataUrl,
+            tool || "pencil",
+            color || "#000000",
+            lineWidth || 2,
+            textBoxes || [],
+            shapes || [],
+            fileUrls || [],
+            extractedTextState || '',
+            stickyNotes || [],
+            currentBackgroundColor,
+            circles || [],
+            label
+          );
+        } else {
+          const newId = await saveWhiteboard(
+            dataUrl,
+            tool || "pencil",
+            color || "#000000",
+            lineWidth || 2,
+            textBoxes || [],
+            shapes || [],
+            fileUrls || [],
+            extractedTextState || '',
+            stickyNotes || [],
+            currentBackgroundColor,
+            circles || [],
+            label
+          );
+          setCurrentBoardId(newId);
+        }
+      };
 
 
     const fetchSavedBoards = async () => {
@@ -736,9 +763,13 @@ const WhiteboardActivity = () => {
                             {savedBoards.map((board, index) => (
   <div key={index} className="mb-4 bg-white rounded-lg overflow-hidden shadow text-black">
     {/* 👇 Tag/Label */}
-    <div className="bg-green-500 text-white text-xs px-2 py-1 font-semibold">
-      {board.label || "Untagged"}
-    </div>
+    <div
+  className="bg-green-500 text-white text-xs px-2 py-1 font-semibold cursor-pointer"
+  onDoubleClick={handleEditLabel}
+>
+  {board.label || "Untagged"}
+</div>
+
 
     <img
       src={board.snapshot}

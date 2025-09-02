@@ -9,13 +9,8 @@ import Dashboard from './components/Dashboard';
 import AdminDashboard from './components/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import SidePanel from './components/SidePanel';
-import WhiteboardCanvas from './components/WhiteboardCanvas';
-import ShareButton from './components/ShareButton';
-import ProfileModal from './components/ProfileModal';
 import TeacherWhiteboards from './components/TeacherWhiteboards';
-import Header from './components/Header';
-import WhiteboardTextLayer from './components/WhiteboardTextLayer';
-import Protractor from './components/Protractor';
+import LessonWhiteboard from './components/LessonWhiteboard';
 
 import RealtimeCollaborationManager, { generateWhiteboardId } from './components/RealtimeCollaborationManager'; // Adjust the path if your component is in a different folder
 
@@ -51,6 +46,7 @@ function App() {
         <Route path="/sidepanel" element={<SidePanel />} />
         <Route path="/RealtimeCollaborationManager" element={<RealtimeCollaborationManager />} />
         <Route path="/teacher/whiteboards" element={<TeacherWhiteboards />} />
+        <Route path="/LessonWhiteboard/:id" element={<LessonWhiteboard />} />
 
         <Route
   path="/whiteboard/:sessionId"

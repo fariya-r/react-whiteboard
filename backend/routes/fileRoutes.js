@@ -14,7 +14,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "No file or user ID uploaded" });
     }
 
-    const filePath = `${userId}/${Date.now()}-${file.originalname}`;
+    const filePath = `${userId}/${Date.now()}-${file.filename}`;
 
     const { error: uploadError } = await supabase.storage
       .from("user-files")
@@ -32,11 +32,15 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       .from("user-files")
       .getPublicUrl(filePath);
 
-    return res.json({
-      message: "Uploaded successfully",
-      url: publicData.publicUrl, // 👈 frontend ke preview ke liye
-      filePath,                  // 👈 frontend DB insert ke liye
-    });
+      return res.json({
+        message: "Uploaded successfully",
+        url: publicData.publicUrl,   // ✅ for preview/download
+        filePath,                    // ✅ internal path in bucket
+        filename: file.filename, // ✅ user’s actual filename
+        mimeType: file.mimetype,         // ✅ file type for preview logic
+      });
+      
+      
   } catch (err) {
     console.error("❌ Upload API error:", err);
     return res.status(500).json({ error: "Something went wrong" });
@@ -46,7 +50,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
 router.delete("/files/:filePath", async (req, res) => {
   try {
-    const { filePath } = req.params;
+    const filePath = decodeURIComponent(req.params.filePath); // 👈 fix
 
     if (!filePath) {
       return res.status(400).json({ error: "File path not provided" });
@@ -60,9 +64,7 @@ router.delete("/files/:filePath", async (req, res) => {
       return res.status(500).json({ error: storageError.message });
     }
 
-    return res.json({
-      message: "File deleted from storage. Remove DB entry separately.",
-    });
+    return res.json({ message: "File deleted successfully" });
   } catch (err) {
     console.error("❌ Delete API error:", err);
     return res.status(500).json({ error: "Something went wrong" });
