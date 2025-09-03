@@ -125,11 +125,11 @@ const MyClasses = () => {
                     : "N/A"}
                 </p>
                 <button
-      className="mt-2 px-2 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
-      onClick={() => navigate(`/Lessonwhiteboard/${lesson.id}`)} // ✅ navigate to whiteboard
-    >
-      Open Lesson
-    </button>
+    onClick={() => navigate(`/lesson/${lesson.id}`)} // ✅ navigate with lesson id
+    className="mt-2 px-2 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+  >
+    Open Lesson
+  </button>
               </div>
             ))}
           </div>

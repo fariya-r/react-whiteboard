@@ -247,8 +247,15 @@ const handleUpload = async () => {
         color: '#fff',
         borderTopRightRadius: '16px',
         borderBottomRightRadius: '16px',
-        overflow: 'hidden', // This is crucial to prevent the main panel from creating its own scrollbar
-        maxWidth: '100%', // Ensures the panel doesn't exceed the width of its parent
+        overflowY: "auto",  
+        overflowX: "hidden",
+        position: "fixed", 
+                maxWidth: '100%',
+                height: '100vh',
+    overflowY: "auto",
+    overflowX: "hidden",
+    position: "fixed", 
+    maxWidth: '100%',
       }}
     >
       <h4 style={{ marginBottom: '10px', fontSize: '18px', color: '#ffffff' }}>
@@ -323,8 +330,8 @@ const handleUpload = async () => {
       </div>
 
       <h4 style={{ marginBottom: '10px', fontSize: '16px', color: '#ffffff' }}>
-        Uploaded Files
-      </h4>
+  Uploaded Files
+</h4>
       <ul
         style={{
           listStyle: 'none',
@@ -332,9 +339,10 @@ const handleUpload = async () => {
           backgroundColor: '#ffffff',
           borderRadius: '6px',
           color: '#000',
-          flex: 1,
           overflowY: 'auto',
           overflowX: 'hidden',
+          flex: 1, // Add flex: 1 here to make it take up available space
+          minHeight: '0', // Important for flex containers with overflow
         }}
       >
         {Array.isArray(filesList) && filesList.length > 0 ? (

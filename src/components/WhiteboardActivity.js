@@ -1,32 +1,23 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { FaEraser, FaPencilAlt, FaUndo, FaRedo, FaPlus, FaTextHeight, FaMinus, FaShareAlt, FaCompass, FaFileMedical, FaHandPaper } from 'react-icons/fa';
 import { saveWhiteboard, getWhiteboards, uploadFile, updateWhiteboard, deleteWhiteboard } from '../services/whiteboardService';
-import Tesseract from 'tesseract.js';
 import useWhiteboardActions from '../hooks/useWhiteboardActions';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { io } from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
-// import CanvasRecorder from '../components/CanvasRecorder';
-// import { ref, uploadString, getDownloadURL } from "firebase/storage";
-// import { db } from '../firebase/firebase';
 import RulerTool from '../components/RulerTool';
 import SidePanel from './SidePanel';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
-import { addDoc, collection } from 'firebase/firestore';
-import { v4 as uuid } from 'uuid';
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase/firebase";
+
 import useWhiteboardSocket from '../hooks/useWhiteboardSocket';
 import useBoardLoader from '../hooks/useBoardLoader';
-import { doc, getDoc, onSnapshot, updateDoc, setDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
 import WhiteboardTextLayer from '../components/WhiteboardTextLayer';
 import WhiteboardToolbar from '../components/WhiteboardToolbar';
 import useCanvasDrawing from '../hooks/useCanvasDrawing';
 import StickyNote from './StickyNote';
 import useCanvasSnapshot from '../hooks/useCanvasSnapshot';
 import Shape from '../components/Shape';
-import ShapeRenderer from "../components/ShapeRenderer";
 import Protractor from "../components/Protractor";
-import MeasurementToolsMenu from "../components/MeasurementToolsMenu";
 import Compass from './Compass';
 import { supabase } from './supabaseClient';
 
@@ -93,7 +84,27 @@ const WhiteboardActivity = () => {
     const [protractorRadius, setProtractorRadius] = useState(250);
     const [activeTouches, setActiveTouches] = useState({});
     const [boardLabel, setBoardLabel] = useState(null);
-
+    const { id } = useParams();   // lesson id from URL
+    useEffect(() => {
+        const fetchLesson = async () => {
+          if (!id) return;  // agar simple session open hai toh skip karo
+      
+          try {
+            const docRef = doc(db, "whiteboards", id);
+            const docSnap = await getDoc(docRef);
+      
+            if (docSnap.exists()) {
+              const lessonData = { id: docSnap.id, ...docSnap.data() };
+              setBoard(lessonData);  // ✅ ye board loadBoard() ke through render hoga
+            }
+          } catch (err) {
+            console.error("Error loading lesson:", err);
+          }
+        };
+      
+        fetchLesson();
+      }, [id]);
+      
     useEffect(() => {
         const load = async () => {
             if (!whiteboardId) return;
@@ -239,17 +250,7 @@ const WhiteboardActivity = () => {
         setShapes(prev => prev.filter(s => s.id !== id));
     };
 
-    // useEffect(() => {
-    //     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-    //         setUser(currentUser);
-    //         setResolved(true);
-    //         if (!currentUser) {
-    //             alert('Please log in to access whiteboards.');
-    //         }
-    //     });
-    //     return () => unsubscribe();
-    // }, [auth]);
-    // In your main component (e.g., App.js)
+   
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
           if (firebaseUser) {
