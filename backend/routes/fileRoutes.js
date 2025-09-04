@@ -34,8 +34,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
       return res.json({
         message: "Uploaded successfully",
-        url: publicData.publicUrl,   // ✅ for preview/download
-        filePath,                    // ✅ internal path in bucket
+        url: publicData.publicUrl,  
+        filePath,                   
         filename: file.filename, // ✅ user’s actual filename
         mimeType: file.mimetype,         // ✅ file type for preview logic
       });
