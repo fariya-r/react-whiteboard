@@ -16,6 +16,7 @@ html, body {
   overscroll-behavior: none;
 }
 
+
 canvas {
   touch-action: none; /* ✅ This disables scroll/pinch on touch devices */
 }

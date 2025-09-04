@@ -8,6 +8,7 @@ import SidePanel from './SidePanel';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/firebase";
+import TopToolbar from "./TopToolbar";
 
 import useWhiteboardSocket from '../hooks/useWhiteboardSocket';
 import useBoardLoader from '../hooks/useBoardLoader';
@@ -813,6 +814,7 @@ const WhiteboardActivity = () => {
                     />
                 )
             }
+<TopToolbar tool={tool} setTool={setTool} setShowRuler={setShowRuler} />
 
             <WhiteboardToolbar
                 tool={tool}

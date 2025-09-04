@@ -24,14 +24,7 @@ const MeasurementToolsMenu = ({ tool, setTool, setShowRuler }) => {
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setIsMenuOpen(prev => !prev)}
-        className={`btn ${isMenuOpen || tool === 'compass' || tool === 'line' || tool === 'protractor' ? 'bg-blue-200' : ''}`}
-        title="Measurement Tools"
-      >
-        <FaRulerCombined />
-      </button>
-
+     
       {isMenuOpen && (
         <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg p-2 flex space-x-2 border border-gray-200">
           {/* ✅ Ruler */}
