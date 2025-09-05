@@ -24,8 +24,16 @@ const ArrowLeftIcon = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 288H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H109.3l105.4-105.4c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg>
 );
 const ArrowBothIcon = ({ className }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M512 256A256 256 0 1 0 0 256a256 256 0 1 0 512 0zM175 208.2H337.8c9.1 0 16.2 7.1 16.2 16.2s-7.1 16.2-16.2 16.2H175c-9.1 0-16.2-7.1-16.2-16.2s7.1-16.2 16.2-16.2zM256 416a160 160 0 1 0 0-320a160 160 0 1 0 0 320z"/></svg>
+  <svg
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+  >
+    <path d="M4.707 7.293a1 1 0 0 0-1.414 1.414L5.586 11H2a1 1 0 1 0 0 2h3.586l-2.293 2.293a1 1 0 1 0 1.414 1.414L9 12l-4.293-4.707zM19.293 7.293 15 12l4.293 4.707a1 1 0 0 0 1.414-1.414L18.414 13H22a1 1 0 1 0 0-2h-3.586l2.293-2.293a1 1 0 0 0-1.414-1.414z"/>
+  </svg>
 );
+
 const PlusIcon = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z"/></svg>
 );
@@ -172,7 +180,6 @@ const MinimizeIcon = ({ className }) => (
     <path d="M416 288H32c-17.7 0-32-14.3-32-32s14.3-32 32-32h384c17.7 0 32 14.3 32 32s-14.3 32-32 32z"/>
   </svg>
 );
-
 const ShapeRenderer = ({ shapeType, stroke }) => {
   const getShapePath = (type) => {
     switch (type) {
@@ -207,17 +214,21 @@ const ShapeRenderer = ({ shapeType, stroke }) => {
   );
 };
 
-const TopToolbar = ({ tool, setTool, setShowRuler }) => {
+// The component now accepts `showRuler` as a prop.
+const TopToolbar = ({ tool, setTool, setShowRuler, showRuler }) => {
   const [expanded, setExpanded] = useState(true);
 
+  // This function now handles all shape clicks and also ensures the ruler is hidden.
   const handleShapeClick = (shape) => {
     setTool(shape);
+    setShowRuler(false); // Make sure the ruler is hidden when a shape is selected.
   };
 
   // Base classes for a tool button
   const buttonBaseClasses = `flex items-center justify-center w-12 h-12 rounded-lg transition-colors duration-200`;
   const buttonHoverClass = `hover:bg-gray-200`;
-  const buttonActiveClass = `bg-blue-300`;
+  // The active class now checks both the current tool and the ruler's state.
+  const buttonActiveClass = (toolName) => (toolName === tool || (toolName === "ruler" && showRuler)) ? 'bg-blue-300' : '';
 
   const animateProps = {
     initial: { width: "100%", height: "70px", padding: "12px 16px" },
@@ -232,9 +243,9 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
     <motion.div
       {...animateProps}
       transition={{ duration: 0.3 }}
-      className={`fixed top-0 left-0 bg-blue-100 text-gray-800 
-                   flex items-center justify-center z-50 shadow-lg rounded-b-2xl`}
-      onClick={() => !expanded && setExpanded(true)}
+      className={`fixed top-0 left-0 bg-blue-100 text-gray-800
+                     flex items-center justify-center z-50 shadow-lg rounded-b-2xl`}
+      // Removed the onClick here to prevent a click on a button from collapsing the toolbar
     >
       {expanded ? (
         <motion.div
@@ -247,15 +258,15 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
           <button
             onClick={() => handleShapeClick("rectangle")}
             title="Rectangle"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "rectangle" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("rectangle")}`}
           >
-            <SquareIcon className="w-8 h-8 text-blue-700" />
+            <SquareIcon className="w-10 h-10 text-blue-700" />
           </button>
 
           <button
             onClick={() => handleShapeClick("circle")}
             title="Circle"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "circle" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("circle")}`}
           >
             <CircleIcon className="w-8 h-8 text-red-700" />
           </button>
@@ -263,7 +274,7 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
           <button
             onClick={() => handleShapeClick("triangle")}
             title="Triangle"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "triangle" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("triangle")}`}
           >
             <TriangleIcon className="w-8 h-8 text-green-700" />
           </button>
@@ -271,7 +282,7 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
           <button
             onClick={() => handleShapeClick("diamond")}
             title="Diamond"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "diamond" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("diamond")}`}
           >
             <DiamondIcon className="w-8 h-8 text-purple-700" />
           </button>
@@ -279,7 +290,7 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
           <button
             onClick={() => handleShapeClick("star")}
             title="Star"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "star" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("star")}`}
           >
             <StarIcon className="w-8 h-8 text-yellow-700" />
           </button>
@@ -287,7 +298,7 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
           <button
             onClick={() => handleShapeClick("arrow-right")}
             title="Arrow Right"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "arrow-right" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("arrow-right")}`}
           >
             <ArrowRightIcon className="w-8 h-8 text-pink-700" />
           </button>
@@ -295,7 +306,7 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
           <button
             onClick={() => handleShapeClick("arrow-left")}
             title="Arrow Left"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "arrow-left" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("arrow-left")}`}
           >
             <ArrowLeftIcon className="w-8 h-8 text-pink-700" />
           </button>
@@ -303,7 +314,7 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
           <button
             onClick={() => handleShapeClick("arrow-both")}
             title="Arrow Both"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "arrow-both" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("arrow-both")}`}
           >
             <ArrowBothIcon className="w-8 h-8 text-indigo-700" />
           </button>
@@ -311,7 +322,7 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
           <button
             onClick={() => handleShapeClick("hexagon")}
             title="Hexagon"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "hexagon" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("hexagon")}`}
           >
             <HexagonIcon className="w-8 h-8 text-teal-700" />
           </button>
@@ -319,7 +330,7 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
           <button
             onClick={() => handleShapeClick("cylinder")}
             title="Cylinder"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "cylinder" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("cylinder")}`}
           >
             <CylinderIcon className="w-8 h-8 text-gray-700" />
           </button>
@@ -328,7 +339,7 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
           <button
             onClick={() => handleShapeClick("brace-left")}
             title="Left Brace"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "brace-left" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("brace-left")}`}
           >
             <div className="text-4xl font-bold text-orange-700">{"{"}</div>
           </button>
@@ -336,7 +347,7 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
           <button
             onClick={() => handleShapeClick("brace-right")}
             title="Right Brace"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "brace-right" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("brace-right")}`}
           >
             <div className="text-4xl font-bold text-orange-700">{"}"}</div>
           </button>
@@ -344,7 +355,7 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
           <button
             onClick={() => handleShapeClick("cloud")}
             title="Cloud"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "cloud" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("cloud")}`}
           >
             <CloudIcon className="w-8 h-8 text-sky-700" />
           </button>
@@ -352,7 +363,7 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
           <button
             onClick={() => handleShapeClick("plus")}
             title="Plus"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "plus" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("plus")}`}
           >
             <PlusIcon className="w-8 h-8 text-green-700" />
           </button>
@@ -360,72 +371,83 @@ const TopToolbar = ({ tool, setTool, setShowRuler }) => {
           {/* Custom Rendered Shapes */}
           <button
             onClick={() => handleShapeClick("trapezoid")}
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "trapezoid" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("trapezoid")}`}
           >
             <ShapeRenderer shapeType="trapezoid" stroke="black" />
           </button>
 
           <button
             onClick={() => handleShapeClick("parallelogram")}
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "parallelogram" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("parallelogram")}`}
           >
             <ShapeRenderer shapeType="parallelogram" stroke="black" />
           </button>
 
           <button
             onClick={() => handleShapeClick("octagon")}
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "octagon" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("octagon")}`}
           >
             <ShapeRenderer shapeType="octagon" stroke="black" />
           </button>
 
           <button
             onClick={() => handleShapeClick("speechBubble")}
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "speechBubble" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("speechBubble")}`}
           >
             <ShapeRenderer shapeType="speechBubble" stroke="black" />
           </button>
 
           {/* Other tools */}
           <button
-            onClick={() => setTool("compass")}
+            onClick={() => handleShapeClick("compass")}
             title="Compass"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "compass" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("compass")}`}
           >
             <CompassIcon className="w-8 h-8 text-orange-700" />
           </button>
 
           <button
-            onClick={() => setTool("protractor")}
+            onClick={() => handleShapeClick("protractor")}
             title="Protractor"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "protractor" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("protractor")}`}
           >
             <ProtractorIcon className="w-8 h-8 text-lime-700" />
           </button>
-
-          <button
-            onClick={() => setShowRuler(true)}
-            title="Ruler"
-            className={`${buttonBaseClasses} ${buttonHoverClass}`}
-          >
-            <RulerIcon className="w-8 h-8 text-cyan-700" />
-          </button>
-
-          {/* New menu icon from the image */}
           <button
             onClick={() => handleShapeClick("hamburger")}
             title="Hamburger Menu"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${tool === "hamburger" ? buttonActiveClass : ""}`}
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("hamburger")}`}
           >
             <HamburgerIcon className="w-8 h-8 text-gray-700" />
           </button>
+
+          {/* This button now toggles the ruler's visibility on and off */}
           <button
-            onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
-            title="Minimize"
-            className="p-2 ml-4 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors duration-200 flex-shrink-0"
+            onClick={() => {
+              setTool("rulerLine");
+              setShowRuler(true);
+            }}
+            
+            title="Ruler"
+            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("ruler")}`}
           >
-            <MinimizeIcon className="w-6 h-6" />
+            <RulerIcon className="w-10 h-10 text-cyan-700" />
           </button>
+
+          {/* New menu icon from the image */}
+          
+          <div className="absolute right-0 top-0 bg-red-500 rounded-sm">
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="p-1 text-white hover:bg-red-600 rounded-sm"
+            >
+              {expanded ? (
+                <MinimizeIcon className="w-4 h-4" />
+              ) : (
+                <ExpandIcon className="w-4 h-4" />
+              )}
+            </button>
+          </div>
         </motion.div>
       ) : (
         <button

@@ -86,44 +86,46 @@ const WhiteboardActivity = () => {
     const [activeTouches, setActiveTouches] = useState({});
     const [boardLabel, setBoardLabel] = useState(null);
     const { id } = useParams();   // lesson id from URL
+    const [rulerAngle, setRulerAngle] = useState(0);
+
     useEffect(() => {
         const fetchLesson = async () => {
-          if (!id) return;  // agar simple session open hai toh skip karo
-      
-          try {
-            const docRef = doc(db, "whiteboards", id);
-            const docSnap = await getDoc(docRef);
-      
-            if (docSnap.exists()) {
-              const lessonData = { id: docSnap.id, ...docSnap.data() };
-              setBoard(lessonData);  // ✅ ye board loadBoard() ke through render hoga
+            if (!id) return;  // agar simple session open hai toh skip karo
+
+            try {
+                const docRef = doc(db, "whiteboards", id);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const lessonData = { id: docSnap.id, ...docSnap.data() };
+                    setBoard(lessonData);  // ✅ ye board loadBoard() ke through render hoga
+                }
+            } catch (err) {
+                console.error("Error loading lesson:", err);
             }
-          } catch (err) {
-            console.error("Error loading lesson:", err);
-          }
         };
-      
+
         fetchLesson();
-      }, [id]);
-      
+    }, [id]);
+
     useEffect(() => {
         const load = async () => {
             if (!whiteboardId) return;
             const whiteboards = await getWhiteboards();
             const wb = whiteboards.find(wb => wb.id === whiteboardId);
             if (wb?.shapes) setShapes(wb.shapes);
-            if (wb?.circles) setCircles(wb.circles); 
+            if (wb?.circles) setCircles(wb.circles);
             setLoading(false);
         };
         load();
     }, [whiteboardId]);
     useEffect(() => {
         if (!user) return; // user na ho to skip
-    
+
         const autoSave = async () => {
             await handleSave();
         };
-    
+
         autoSave();
     }, [circles]);  // ✅ circles change hote hi save hoga
     useEffect(() => {
@@ -133,18 +135,18 @@ const WhiteboardActivity = () => {
         };
         autoSave();
     }, [shapes]);
-        
+
     const handleTouchStart = (e) => {
         e.preventDefault();
         const touches = e.touches;
         const newTouches = { ...activeTouches };
-    
+
         for (let i = 0; i < touches.length; i++) {
             const touch = touches[i];
             const rect = canvasRef.current.getBoundingClientRect();
             const x = touch.clientX - rect.left;
             const y = touch.clientY - rect.top;
-    
+
             newTouches[touch.identifier] = { x, y };
         }
         setActiveTouches(newTouches);
@@ -152,41 +154,41 @@ const WhiteboardActivity = () => {
     const handleEditLabel = () => {
         const newLabel = prompt("Edit lesson tag/label:", boardLabel || "Untagged");
         if (newLabel && newLabel.trim() !== "") {
-          setBoardLabel(newLabel);
-      
-          // Agar board already save hai → update karo
-          if (currentBoardId) {
-            updateWhiteboard(
-              currentBoardId,
-              backgroundSnapshot,   // ya last snapshot jo bhi ho
-              tool || "pencil",
-              color || "#000000",
-              lineWidth || 2,
-              textBoxes || [],
-              shapes || [],
-              fileUrls || [],
-              extractedTextState || '',
-              stickyNotes || [],
-              backgroundColor,
-              circles || [],
-              newLabel
-            );
-          }
+            setBoardLabel(newLabel);
+
+            // Agar board already save hai → update karo
+            if (currentBoardId) {
+                updateWhiteboard(
+                    currentBoardId,
+                    backgroundSnapshot,   // ya last snapshot jo bhi ho
+                    tool || "pencil",
+                    color || "#000000",
+                    lineWidth || 2,
+                    textBoxes || [],
+                    shapes || [],
+                    fileUrls || [],
+                    extractedTextState || '',
+                    stickyNotes || [],
+                    backgroundColor,
+                    circles || [],
+                    newLabel
+                );
+            }
         }
-      };
-      
-    
+    };
+
+
     const handleTouchMove = (e) => {
         e.preventDefault();
         const touches = e.touches;
         const newTouches = { ...activeTouches };
-    
+
         for (let i = 0; i < touches.length; i++) {
             const touch = touches[i];
             const rect = canvasRef.current.getBoundingClientRect();
             const x = touch.clientX - rect.left;
             const y = touch.clientY - rect.top;
-    
+
             const prev = newTouches[touch.identifier];
             if (prev) {
                 // Draw line from previous point to new point
@@ -196,13 +198,13 @@ const WhiteboardActivity = () => {
                 ctx.lineTo(x, y);
                 ctx.stroke();
             }
-    
+
             newTouches[touch.identifier] = { x, y };
         }
-    
+
         setActiveTouches(newTouches);
     };
-    
+
     const handleTouchEnd = (e) => {
         const newTouches = { ...activeTouches };
         for (let i = 0; i < e.changedTouches.length; i++) {
@@ -211,7 +213,7 @@ const WhiteboardActivity = () => {
         }
         setActiveTouches(newTouches);
     };
-    
+
 
     const handleShapeClick = (selectedShape) => {
         setTool(selectedShape);
@@ -251,26 +253,26 @@ const WhiteboardActivity = () => {
         setShapes(prev => prev.filter(s => s.id !== id));
     };
 
-   
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-          if (firebaseUser) {
-            const idToken = await firebaseUser.getIdToken();
-            await supabase.auth.signInWithIdToken({ provider: 'firebase', token: idToken });
-            
-            setUser(firebaseUser);   // ✅ Add back
-            setUserId(firebaseUser.uid);
-            setResolved(true);
-          } else {
-            await supabase.auth.signOut();
-            setUser(null);           // ✅ Reset user
-            setUserId(null);
-          }
+            if (firebaseUser) {
+                const idToken = await firebaseUser.getIdToken();
+                await supabase.auth.signInWithIdToken({ provider: 'firebase', token: idToken });
+
+                setUser(firebaseUser);   // ✅ Add back
+                setUserId(firebaseUser.uid);
+                setResolved(true);
+            } else {
+                await supabase.auth.signOut();
+                setUser(null);           // ✅ Reset user
+                setUserId(null);
+            }
         });
-      
+
         return () => unsubscribe();
-      }, [auth]);
-      
+    }, [auth]);
+
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -316,6 +318,7 @@ const WhiteboardActivity = () => {
         setPivotPoint,
         currentPoint,
         setCurrentPoint,
+        rulerAngle
 
     );
 
@@ -471,8 +474,8 @@ const WhiteboardActivity = () => {
             setShowSavedBoards(false);
             setShapes(Array.isArray(boardToLoad.shapes) ? boardToLoad.shapes : []);
         };
-      
-          
+
+
         img.onerror = (e) => {
             console.error("Error loading board snapshot image in loadBoard:", e);
             contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -499,63 +502,55 @@ const WhiteboardActivity = () => {
         }
     };
 
-    
+
 
     const handleSave = async () => {
         if (!user) {
-          alert('Please log in to save');
-          return;
+            alert('Please log in to save');
+            return;
         }
-      
+    
         const canvas = canvasRef.current;
         if (!canvas) return;
-      
+    
         const dataUrl = await getSnapshotWithElements(shapes, circles);
-      
         const currentBackgroundColor = canvas.style.backgroundColor || "#ffffff";
-        
-        // ✅ Prompt only if new board
-        let label = boardLabel;
-        if (!currentBoardId && !boardLabel) {
-          label = prompt("Enter lesson tag/label (e.g., Class 9 - Math)", "Untagged");
-          setBoardLabel(label);
-        }
-      
+        const label = boardLabel || "Untitled"; // Use a default label if none is set
+    
         if (currentBoardId) {
-          await updateWhiteboard(
-            currentBoardId,
-            dataUrl,
-            tool || "pencil",
-            color || "#000000",
-            lineWidth || 2,
-            textBoxes || [],
-            shapes || [],
-            fileUrls || [],
-            extractedTextState || '',
-            stickyNotes || [],
-            currentBackgroundColor,
-            circles || [],
-            label
-          );
+            await updateWhiteboard(
+                currentBoardId,
+                dataUrl,
+                tool || "pencil",
+                color || "#000000",
+                lineWidth || 2,
+                textBoxes || [],
+                shapes || [],
+                fileUrls || [],
+                extractedTextState || '',
+                stickyNotes || [],
+                currentBackgroundColor,
+                circles || [],
+                label
+            );
         } else {
-          const newId = await saveWhiteboard(
-            dataUrl,
-            tool || "pencil",
-            color || "#000000",
-            lineWidth || 2,
-            textBoxes || [],
-            shapes || [],
-            fileUrls || [],
-            extractedTextState || '',
-            stickyNotes || [],
-            currentBackgroundColor,
-            circles || [],
-            label
-          );
-          setCurrentBoardId(newId);
+            const newId = await saveWhiteboard(
+                dataUrl,
+                tool || "pencil",
+                color || "#000000",
+                lineWidth || 2,
+                textBoxes || [],
+                shapes || [],
+                fileUrls || [],
+                extractedTextState || '',
+                stickyNotes || [],
+                currentBackgroundColor,
+                circles || [],
+                label
+            );
+            setCurrentBoardId(newId);
         }
-      };
-
+    };
 
     const fetchSavedBoards = async () => {
         if (showSavedBoards) {
@@ -612,7 +607,7 @@ const WhiteboardActivity = () => {
                         onTextExtracted={handleExtractedText}
                         ocrText={extractedTextState}
                         userId={userId}
-                        // userId={isAdminView ? teacherUid : user?.uid}
+                    // userId={isAdminView ? teacherUid : user?.uid}
                     />
                 </div>
             )}
@@ -638,8 +633,8 @@ const WhiteboardActivity = () => {
                         left: 0,
                     }}
                     onTouchStart={handleTouchStart}
-  onTouchMove={handleTouchMove}
-  onTouchEnd={handleTouchEnd}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
                     onMouseDown={handleMouseDown}
                     onMouseMove={isDrawing ? drawLine : undefined}
                     onMouseUp={finishDrawing}
@@ -688,18 +683,18 @@ const WhiteboardActivity = () => {
                     </div>
                 )}
 
-{tool === 'compass' && (
-                <Compass
-                    // The position is now a controlled prop, managed by the parent component
-                    position={compassPosition}
+                {tool === 'compass' && (
+                    <Compass
+                        // The position is now a controlled prop, managed by the parent component
+                        position={compassPosition}
 
-                    onDrawCircle={drawCircleOnCanvas}
-                />
-            )}
+                        onDrawCircle={drawCircleOnCanvas}
+                    />
+                )}
 
             </div>
-            
-           
+
+
 
 
 
@@ -763,40 +758,40 @@ const WhiteboardActivity = () => {
                             }}
                         >
                             {savedBoards.map((board, index) => (
-  <div key={index} className="mb-4 bg-white rounded-lg overflow-hidden shadow text-black">
-    {/* 👇 Tag/Label */}
-    <div
-  className="bg-green-500 text-white text-xs px-2 py-1 font-semibold cursor-pointer"
-  onDoubleClick={handleEditLabel}
->
-  {board.label || "Untagged"}
-</div>
+                                <div key={index} className="mb-4 bg-white rounded-lg overflow-hidden shadow text-black">
+                                    {/* 👇 Tag/Label */}
+                                    <div
+                                        className="bg-green-500 text-white text-xs px-2 py-1 font-semibold cursor-pointer"
+                                        onDoubleClick={handleEditLabel}
+                                    >
+                                        {board.label || "Untagged"}
+                                    </div>
 
 
-    <img
-      src={board.snapshot}
-      alt={`Whiteboard ${index + 1}`}
-      onClick={() => loadBoard(board)}
-      className="w-full h-auto cursor-pointer"
-    />
+                                    <img
+                                        src={board.snapshot}
+                                        alt={`Whiteboard ${index + 1}`}
+                                        onClick={() => loadBoard(board)}
+                                        className="w-full h-auto cursor-pointer"
+                                    />
 
-    <div className="flex justify-between items-center px-2 py-1 bg-blue-500 text-white text-xs">
-      <span className="truncate">{board.createdAt?.toDate?.().toLocaleString() || 'Unknown'}</span>
-      <button
-        onClick={async () => {
-          const confirmDelete = window.confirm('Delete this whiteboard?');
-          if (confirmDelete) {
-            await deleteWhiteboard(board.id);
-            setSavedBoards(prev => prev.filter(b => b.id !== board.id));
-          }
-        }}
-        className="hover:text-red-200"
-      >
-        🗑️
-      </button>
-    </div>
-  </div>
-))}
+                                    <div className="flex justify-between items-center px-2 py-1 bg-blue-500 text-white text-xs">
+                                        <span className="truncate">{board.createdAt?.toDate?.().toLocaleString() || 'Unknown'}</span>
+                                        <button
+                                            onClick={async () => {
+                                                const confirmDelete = window.confirm('Delete this whiteboard?');
+                                                if (confirmDelete) {
+                                                    await deleteWhiteboard(board.id);
+                                                    setSavedBoards(prev => prev.filter(b => b.id !== board.id));
+                                                }
+                                            }}
+                                            className="hover:text-red-200"
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
 
                         </div>
                     </div>
@@ -811,10 +806,12 @@ const WhiteboardActivity = () => {
                         isDraggingRuler={isDraggingRuler}
                         setIsDraggingRuler={setIsDraggingRuler}
                         setTool={setTool}
+                        rulerAngle={rulerAngle}          // 👈 add this
+                        setRulerAngle={setRulerAngle}
                     />
                 )
             }
-<TopToolbar tool={tool} setTool={setTool} setShowRuler={setShowRuler} />
+            <TopToolbar tool={tool} setTool={setTool} setShowRuler={setShowRuler} />
 
             <WhiteboardToolbar
                 tool={tool}

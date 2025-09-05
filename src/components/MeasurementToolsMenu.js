@@ -4,59 +4,34 @@ import Compass from './Compass';
 const MeasurementToolsMenu = ({ tool, setTool, setShowRuler }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const handleRulerClick = () => {
-    setShowRuler(true);
-    setTool('line');   // ruler works with line tool
-    setIsMenuOpen(false);
-  };
+  // const handleRulerClick = () => {
+  //   setShowRuler(true);
+  //   setTool('line');   // ruler works with line tool
+  //   setIsMenuOpen(false);
+  // };
 
-  const handleCompassClick = () => {
-    setTool(prev => (prev === 'compass' ? null : 'compass'));
-    setShowRuler(false);
-    setIsMenuOpen(false);
-  };
+  
 
-  const handleProtractorClick = () => {
-    setTool(prev => (prev === 'protractor' ? null : 'protractor'));
-    setShowRuler(false);
-    setIsMenuOpen(false);
-  };
-
-  return (
-    <div className="relative">
+  // return (
+  //   // <div className="relative">
      
-      {isMenuOpen && (
-        <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg p-2 flex space-x-2 border border-gray-200">
-          {/* ✅ Ruler */}
-          <button
-            onClick={handleRulerClick}
-            className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'line' && 'bg-blue-200'}`}
-            title="Ruler"
-          >
-            <FaRuler />
-          </button>
+  //   //   {isMenuOpen && (
+  //   //     <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg p-2 flex space-x-2 border border-gray-200">
+  //   //       {/* ✅ Ruler */}
+  //   //       {/* <button
+  //   //         onClick={handleRulerClick}
+  //   //         className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'line' && 'bg-blue-200'}`}
+  //   //         title="Ruler"
+  //   //       >
+  //   //         <FaRuler />
+  //   //       </button> */}
 
-          {/* ✅ Compass */}
-          <button
-            onClick={handleCompassClick}
-            className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'compass' && 'bg-blue-200'}`}
-            title="Compass"
-          >
-            <FaCompass />
-          </button>
-
-          {/* ✅ Protractor */}
-          <button
-            onClick={handleProtractorClick}
-            className={`p-2 rounded-full hover:bg-gray-200 transition-colors ${tool === 'protractor' && 'bg-blue-200'}`}
-            title="Protractor"
-          >
-            <FaDraftingCompass />
-          </button>
-        </div>
-      )}
-    </div>
-  );
+         
+         
+  //   //     </div>
+  //   //   )}
+  //   // </div>
+  // );
 };
 
 export default MeasurementToolsMenu;

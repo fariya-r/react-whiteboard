@@ -1,4 +1,3 @@
-// src/components/RulerTool.js
 import React, { useEffect, useState, useCallback } from 'react';
 
 const RulerTool = ({
@@ -8,53 +7,43 @@ const RulerTool = ({
   setRulerPosition,
   isDraggingRuler,
   setIsDraggingRuler,
-  // setTool, // Removed as it's not directly used by RulerTool itself for its functionality
-  // canvasRef, // Removed as it's not directly used for ruler's own functionality
-  // scale // Removed as it's not directly used for ruler's own functionality
+  rulerAngle,               // ✅ angle as prop
+  setRulerAngle,            // ✅ update angle from parent
 }) => {
-  const [rulerAngle, setRulerAngle] = useState(0);
   const [isRotating, setIsRotating] = useState(false);
   const [rotationStartMouseAngle, setRotationStartMouseAngle] = useState(0);
   const [rotationStartRulerAngle, setRotationStartRulerAngle] = useState(0);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 }); // For dragging
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  // Define fixed dimensions for the ruler image
-  const RULER_WIDTH = 250;
-  const RULER_HEIGHT = 40;
+  const RULER_WIDTH = 600;
+  const RULER_HEIGHT = 70;
+  const INCH_TO_PIXELS = 25.4;
 
-  // Helper to get mouse angle relative to the ruler's *unrotated* center
-  const getMouseAngleRelativeToRulerCenter = useCallback((e) => {
-    // Calculate center based on rulerPosition (untransformed top-left) and fixed dimensions
-    const centerX = rulerPosition.x + RULER_WIDTH / 2;
-    const centerY = rulerPosition.y + RULER_HEIGHT / 2;
-
-    const mouseX = e.clientX;
-    const mouseY = e.clientY;
-
-    const dx = mouseX - centerX;
-    const dy = mouseY - centerY;
-
-    return Math.atan2(dy, dx) * (180 / Math.PI); // Convert to degrees
-  }, [rulerPosition]); // Dependency on rulerPosition to recalculate center if ruler moves
+  const getMouseAngleRelativeToRulerCenter = useCallback(
+    (e) => {
+      const centerX = rulerPosition.x + RULER_WIDTH / 2;
+      const centerY = rulerPosition.y + RULER_HEIGHT / 2;
+      const dx = e.clientX - centerX;
+      const dy = e.clientY - centerY;
+      return Math.atan2(dy, dx) * (180 / Math.PI);
+    },
+    [rulerPosition]
+  );
 
   const handleMouseDown = (e) => {
-    e.stopPropagation(); // Prevent canvas drawing
-
-    // Get current mouse position
+    e.stopPropagation();
     const mouseX = e.clientX;
     const mouseY = e.clientY;
 
-    // Define a rotation hotspot (e.g., top-right 30x30px area of the ruler image)
-    const rotationHotspotSize = 30;
-    // Calculate the top-right corner of the ruler based on its current position and dimensions
+    const rotationHotspotSize = 20;
     const rulerRight = rulerPosition.x + RULER_WIDTH;
     const rulerTop = rulerPosition.y;
 
     const isClickInRotationHotspot =
-      mouseX >= (rulerRight - rotationHotspotSize) &&
+      mouseX >= rulerRight - rotationHotspotSize &&
       mouseX <= rulerRight &&
       mouseY >= rulerTop &&
-      mouseY <= (rulerTop + rotationHotspotSize);
+      mouseY <= rulerTop + rotationHotspotSize;
 
     if (isClickInRotationHotspot) {
       setIsRotating(true);
@@ -74,7 +63,7 @@ const RulerTool = ({
       if (isRotating) {
         const currentMouseAngle = getMouseAngleRelativeToRulerCenter(e);
         const angleDiff = currentMouseAngle - rotationStartMouseAngle;
-        setRulerAngle(rotationStartRulerAngle + angleDiff);
+        setRulerAngle(rotationStartRulerAngle + angleDiff); // ✅ angle update to parent
       } else if (isDraggingRuler) {
         setRulerPosition({
           x: e.clientX - dragOffset.x,
@@ -95,28 +84,178 @@ const RulerTool = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDraggingRuler, isRotating, dragOffset, rulerAngle, rotationStartMouseAngle, rotationStartRulerAngle, setRulerPosition, setRulerAngle, getMouseAngleRelativeToRulerCenter]);
+  }, [
+    isDraggingRuler,
+    isRotating,
+    dragOffset,
+    rotationStartMouseAngle,
+    rotationStartRulerAngle,
+    setRulerPosition,
+    setRulerAngle,
+    getMouseAngleRelativeToRulerCenter,
+  ]);
 
   if (!showRuler) return null;
+  // ---- Top (cm) markings ----
+const topMarkings = [];
+const cmToPx = 10;
+const topOffset = 2;
+const maxCm = 6; // stop at 6 cm
+
+for (let i = 0; i <= maxCm * 10; i++) {
+  const isCm = i % 10 === 0;
+  const isHalfCm = i % 5 === 0;
+  const x = i * cmToPx;
+
+  let length = isCm ? 10 : isHalfCm ? 7 : 4;
+
+  // draw the line
+  topMarkings.push(
+    <line
+      key={`cm-marking-${i}`}
+      x1={x}
+      y1={topOffset}
+      x2={x}
+      y2={topOffset + length}
+      stroke="#000"
+      strokeWidth="1"
+    />
+  );
+
+  // Add numbers (but skip "6")
+  if (isCm) {
+    const cmValue = i / 10;
+
+    // Move "0" a little right
+    const textX = cmValue === 0 ? x + 6 : x;
+
+    if (cmValue !== 6) {
+      topMarkings.push(
+        <text
+          key={`cm-text-${i}`}
+          x={textX}
+          y={topOffset + length + 12}
+          fontSize="12"
+          textAnchor="middle"
+          fill="#000"
+          fontFamily="Arial"
+        >
+          {cmValue}
+        </text>
+      );
+    }
+  }
+}
+ // ---- Bottom (inches) markings ----
+const bottomMarkings = [];
+const bottomOffset = RULER_HEIGHT; // ruler bottom edge
+const totalInches = Math.floor(RULER_WIDTH / INCH_TO_PIXELS); // only full inches
+
+for (let i = 0; i <= totalInches; i++) {
+  const x = i * INCH_TO_PIXELS;
+
+  // Make sure we stay inside ruler
+  if (x > RULER_WIDTH) break;
+
+  // Main inch line
+  bottomMarkings.push(
+    <line
+      key={`inch-marking-${i}`}
+      x1={x}
+      y1={bottomOffset}
+      x2={x}
+      y2={bottomOffset - 10}
+      stroke="#000"
+      strokeWidth="1.5"
+    />
+  );
+
+  // Numbers
+  if (i !== 6) {
+    bottomMarkings.push(
+      <text
+        key={`inch-text-${i}`}
+        x={i === 0 ? x + 6 : x}
+        y={bottomOffset - 12}
+        fontSize="12"
+        textAnchor="middle"
+        fill="#000"
+        fontFamily="Arial"
+      >
+        {i}
+      </text>
+    );
+  }
+
+  // Subdivisions (inside ruler only)
+  for (let j = 1; j < 8; j++) {
+    const subX = x + (j * INCH_TO_PIXELS) / 8;
+    if (subX >= RULER_WIDTH) continue; // skip those outside
+
+    let subLength = j % 4 === 0 ? 8 : j % 2 === 0 ? 5 : 3;
+    bottomMarkings.push(
+      <line
+        key={`sub-inch-${i}-${j}`}
+        x1={subX}
+        y1={bottomOffset}
+        x2={subX}
+        y2={bottomOffset - subLength}
+        stroke="#000"
+        strokeWidth="1"
+      />
+    );
+  }
+}
+
 
   return (
-    <img
-      src="/assets/rulr.jpeg"
-      alt="Ruler"
-      onMouseDown={handleMouseDown}
-      style={{
-        position: 'absolute',
-        left: `${rulerPosition.x}px`,
-        top: `${rulerPosition.y}px`,
-        width: `${RULER_WIDTH}px`, // Use constants for width
-        height: `${RULER_HEIGHT}px`, // Use constants for height
-        userSelect: 'none',
-        zIndex: 20,
-        cursor: isRotating ? 'grabbing' : (isDraggingRuler ? 'grabbing' : 'grab'),
-        transform: `rotate(${rulerAngle}deg)`, // Apply rotation
-        transformOrigin: 'center center', // Rotate around the center of the image
-      }}
-    />
+    <div
+    className="absolute cursor-grab rounded-md shadow-lg"
+    onMouseDown={handleMouseDown}
+    style={{
+      left: `${rulerPosition.x}px`,
+      top: `${rulerPosition.y}px`,
+      width: `${RULER_WIDTH}px`,
+      height: `${RULER_HEIGHT}px`,
+      userSelect: 'none',
+      zIndex: 20,
+      transform: `rotate(${rulerAngle}deg)`, // ✅ ruler tilt from parent
+      transformOrigin: 'center center',
+    }}
+  >
+      <svg
+        width={RULER_WIDTH}
+        height={RULER_HEIGHT}
+        className="w-full h-full rounded-md"
+        style={{ overflow: 'visible' }}
+      >
+        <rect
+          x="0"
+          y="0"
+          width={RULER_WIDTH}
+          height={RULER_HEIGHT}
+          fill="#FFC107"
+          rx="5"
+          ry="5"
+          stroke="#E6A800"
+          strokeWidth="1"
+        />
+        <g>{topMarkings}</g>
+        <g>{bottomMarkings}</g>
+
+        <rect
+          x={RULER_WIDTH - 20}
+          y="0"
+          width="20"
+          height="20"
+          fill="#FFC107"
+          stroke="#E6A800"
+          strokeWidth="1"
+          className="rounded-bl-md"
+          style={{ cursor: 'nw-resize' }}
+        />
+      </svg>
+    </div>
   );
 };
 
