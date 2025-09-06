@@ -218,18 +218,22 @@ const ShapeRenderer = ({ shapeType, stroke }) => {
 const TopToolbar = ({ tool, setTool, setShowRuler, showRuler }) => {
   const [expanded, setExpanded] = useState(true);
 
-  // This function now handles all shape clicks and also ensures the ruler is hidden.
   const handleShapeClick = (shape) => {
     setTool(shape);
-    setShowRuler(false); // Make sure the ruler is hidden when a shape is selected.
+    setShowRuler(shape === 'rulerLine'); // true only if ruler is selected
   };
+  
+  
 
   // Base classes for a tool button
   const buttonBaseClasses = `flex items-center justify-center w-12 h-12 rounded-lg transition-colors duration-200`;
   const buttonHoverClass = `hover:bg-gray-200`;
   // The active class now checks both the current tool and the ruler's state.
-  const buttonActiveClass = (toolName) => (toolName === tool || (toolName === "ruler" && showRuler)) ? 'bg-blue-300' : '';
-
+  const buttonActiveClass = (toolName) => {
+    if (toolName === 'rulerLine') return showRuler ? 'bg-blue-300' : '';
+    return toolName === tool ? 'bg-blue-300' : '';
+  };
+  
   const animateProps = {
     initial: { width: "100%", height: "70px", padding: "12px 16px" },
     animate: {
@@ -423,16 +427,13 @@ const TopToolbar = ({ tool, setTool, setShowRuler, showRuler }) => {
 
           {/* This button now toggles the ruler's visibility on and off */}
           <button
-            onClick={() => {
-              setTool("rulerLine");
-              setShowRuler(true);
-            }}
-            
-            title="Ruler"
-            className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("ruler")}`}
-          >
-            <RulerIcon className="w-10 h-10 text-cyan-700" />
-          </button>
+  onClick={() => handleShapeClick("rulerLine")}
+  title="Ruler"
+  className={`${buttonBaseClasses} ${buttonHoverClass} ${buttonActiveClass("rulerLine")}`}
+>
+  <RulerIcon className="w-10 h-10 text-cyan-700" />
+</button>
+
 
           {/* New menu icon from the image */}
           

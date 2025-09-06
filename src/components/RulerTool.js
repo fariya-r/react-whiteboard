@@ -29,7 +29,7 @@ const RulerTool = ({
     },
     [rulerPosition]
   );
-
+  
   const handleMouseDown = (e) => {
     e.stopPropagation();
     const mouseX = e.clientX;

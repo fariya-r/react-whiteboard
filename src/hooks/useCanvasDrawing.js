@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback,useRef } from 'react';
 
 const useCanvasDrawing = (
     canvasRef,
@@ -20,6 +20,10 @@ const useCanvasDrawing = (
     setRulerAngle
 ) => {
     const [tool, setTool] = useState('pen');
+    const rulerSnapshotImg = useRef(null);
+    const [rulerStart, setRulerStart] = useState(null);
+    const [rulerEnd, setRulerEnd] = useState(null);
+    const [isRulerDrawing, setIsRulerDrawing] = useState(false);
     
     const [color, setColor] = useState('#000000');
     const [lineWidth, setLineWidth] = useState(2);
@@ -27,7 +31,6 @@ const useCanvasDrawing = (
     const [pivotPoint, setPivotPoint] = useState(null);
     const [currentPoint, setCurrentPoint] = useState(null);
     const [stickyNotes, setStickyNotes] = useState([]);
-    const [rulerStart, setRulerStart] = useState(null);
     // lineStart state is removed
     const [isDrawingCircle, setIsDrawingCircle] = useState(false);
     const COMPASS_WIDTH = 100;
@@ -40,7 +43,12 @@ const useCanvasDrawing = (
     const [angles, setAngles] = useState([]);
     const [circles, setCircles] = useState([]);
     const [rulerLineStart, setRulerLineStart] = useState(null);
-
+    const [rulerLineEnd, setRulerLineEnd] = useState(null);
+    const commitCanvasToSnapshot = () => {
+        const snapshot = canvasRef.current.toDataURL();
+        setBackgroundSnapshot(snapshot);
+    };
+    
     const handleUpdateStickyNoteSize = useCallback((id, newSize) => {
         setStickyNotes(prevNotes =>
             prevNotes.map(note =>
@@ -200,8 +208,10 @@ const useCanvasDrawing = (
                     x: x - compassPosition.x,
                     y: y - compassPosition.y,
                 });
+                commitCanvasToSnapshot();
             }
             return;
+            
         }
 
         // Removed logic for 'lined' tool
@@ -214,12 +224,19 @@ const useCanvasDrawing = (
         } if (tool === 'rulerLine') {
             const { x, y } = getScaledCoordinates(e);
             setRulerLineStart({ x, y });
-            setIsDrawing(true);
+            setRulerLineEnd({ x, y });
+            setIsRulerDrawing(true);
         
-            // ✅ yahan snapshot save karna zaroori hai
+            // create snapshot image once
             const snapshot = canvasRef.current.toDataURL();
-            setPreviousSnapshot(snapshot);
+            const img = new Image();
+            img.src = snapshot;
+            rulerSnapshotImg.current = img;
+        
+            setPreviousSnapshot(snapshot); 
+            commitCanvasToSnapshot();// optional if you need
         }
+        
         
           else if (tool === 'stickyNote') {
             const newNote = {
@@ -236,6 +253,19 @@ const useCanvasDrawing = (
             socket.emit('drawing', { room: sessionId, action: 'start', x, y, tool, color, lineWidth });
         }
     }, [contextRef, tool, getScaledCoordinates, socket, sessionId, color, lineWidth, compassPosition, isInsideCompass, setDragStartOffset, setIsDraggingCompass]);
+// helper: rotate point around center
+// helper: rotate point around center
+function rotatePoint(x, y, centerX, centerY, angle) {
+    const rad = (angle * Math.PI) / 180;
+    const dx = x - centerX;
+    const dy = y - centerY;
+  
+    return {
+      x: centerX + dx * Math.cos(rad) - dy * Math.sin(rad),
+      y: centerY + dx * Math.sin(rad) + dy * Math.cos(rad),
+    };
+  }
+  
 
     const drawLine = useCallback((e) => {
         if (!isDrawing || !contextRef.current) return;
@@ -247,31 +277,26 @@ const useCanvasDrawing = (
         } else if (tool === 'eraser') {
             contextRef.current.clearRect(x - lineWidth / 2, y - lineWidth / 2, lineWidth, lineWidth);
         }
-        if (tool === 'rulerLine' && rulerLineStart && previousSnapshot) {
+        if (tool === 'rulerLine' && rulerLineStart && rulerSnapshotImg.current) {
             const { x, y } = getScaledCoordinates(e);
             const ctx = contextRef.current;
-            const img = new Image();
-            img.src = previousSnapshot;
-            img.onload = () => {
-                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-                ctx.drawImage(img, 0, 0, canvasRef.current.width, canvasRef.current.height);
         
-                const angleRad = (rulerAngle * Math.PI) / 180;
-                const dx = x - rulerLineStart.x;
-                const dy = y - rulerLineStart.y;
-                const length = dx * Math.cos(angleRad) + dy * Math.sin(angleRad);
+            // clear and draw previous snapshot synchronously
+            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+            ctx.drawImage(rulerSnapshotImg.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
         
-                const endX = rulerLineStart.x + length * Math.cos(angleRad);
-                const endY = rulerLineStart.y + length * Math.sin(angleRad);
+            // apply rotation and draw the ruler line
+            const rotatedEnd = rotatePoint(x, y, rulerLineStart.x, rulerLineStart.y, rulerAngle);
         
-                ctx.beginPath();
-                ctx.moveTo(rulerLineStart.x, rulerLineStart.y);
-                ctx.lineTo(endX, endY);
-                ctx.strokeStyle = color;
-                ctx.lineWidth = lineWidth;
-                ctx.stroke();
-            };
+            ctx.beginPath();
+            ctx.moveTo(rulerLineStart.x, rulerLineStart.y);
+            ctx.lineTo(rotatedEnd.x, rotatedEnd.y);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+            commitCanvasToSnapshot();
         }
+        
         
           
         if (socket) {
@@ -300,31 +325,20 @@ const useCanvasDrawing = (
         if (tool === 'pen' || tool === 'eraser') {
             ctx.closePath();
         }
-        if (tool === 'rulerLine' && rulerLineStart) {
-            const { x, y } = getScaledCoordinates(e);
+        if (isRulerDrawing && tool === 'rulerLine' && rulerLineStart && rulerLineEnd) {
             const ctx = contextRef.current;
-            const angleRad = (rulerAngle * Math.PI) / 180;
-        
-            const dx = x - rulerLineStart.x;
-            const dy = y - rulerLineStart.y;
-            const length = dx * Math.cos(angleRad) + dy * Math.sin(angleRad);
-        
-            const endX = rulerLineStart.x + length * Math.cos(angleRad);
-            const endY = rulerLineStart.y + length * Math.sin(angleRad);
-        
             ctx.beginPath();
             ctx.moveTo(rulerLineStart.x, rulerLineStart.y);
-            ctx.lineTo(endX, endY);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = lineWidth;
+            ctx.lineTo(rulerLineEnd.x, rulerLineEnd.y);
             ctx.stroke();
+            ctx.closePath();
         
+            // reset
+            setIsRulerDrawing(false);
             setRulerLineStart(null);
-            setIsDrawing(false);
-            setPreviousSnapshot(null); // ✅ reset
-        
-            const snapshot = canvasRef.current.toDataURL();
-            setBackgroundSnapshot(snapshot);
+            setRulerLineEnd(null);
+            rulerSnapshotImg.current = null;
+            commitCanvasToSnapshot(); // free the ref
         }
         
         if (isDrawingCircle && tool === 'compass' && pivotPoint) {
@@ -345,6 +359,7 @@ const useCanvasDrawing = (
             ctx.closePath();
         
             setIsDrawingCircle(false);
+            commitCanvasToSnapshot();
         }
         const snapshot = canvasRef.current.toDataURL();
         setBackgroundSnapshot(snapshot);
@@ -356,53 +371,108 @@ const useCanvasDrawing = (
         }
     }, [isDrawing, isDrawingCircle, isDraggingCompass, contextRef, getScaledCoordinates, tool, pivotPoint, color, lineWidth, canvasRef, setBackgroundSnapshot, socket, sessionId]);
 
-    const handleMouseDown = useCallback((e) => {
-        if (!contextRef.current) return;
-        startDrawing(e);
-    }, [contextRef, startDrawing]);
-
     useEffect(() => {
+        if (tool !== 'rulerLine') {
+          setRulerLineStart(null); // reset only when switching away
+        }
+      }, [tool]);
+      
+
+      const handleMouseDown = useCallback((e) => {
+        if (!contextRef.current) return;
+      
+        const coords = getScaledCoordinates(e);
+      
+        if (tool === 'rulerLine') {
+          setRulerLineStart(coords);
+          setRulerLineEnd(coords); // start and end are same initially
+          setIsRulerDrawing(true);
+          commitCanvasToSnapshot();
+        } else {
+          startDrawing(e);
+        }
+      }, [tool, contextRef, startDrawing]);
+      
+      useEffect(() => {
+        if (tool !== 'rulerLine') {
+          setRulerLineStart(null);
+          setRulerLineEnd(null);
+          setIsRulerDrawing(false);
+          commitCanvasToSnapshot();
+        }
+      }, [tool]);
+      
+    
+      useEffect(() => {
         const handleMove = (e) => {
             if (!contextRef.current) return;
             const { x, y } = getScaledCoordinates(e);
-
+    
             if (isDraggingCompass) {
                 setCompassPosition({ x: x - dragStartOffset.x, y: y - dragStartOffset.y });
                 return;
             }
-
-            // Removed logic for 'lined' tool preview
-            // if (tool === 'lined' && isDrawing && lineStart) { ... }
-
-            if (isDrawing && ['pen', 'eraser', 'rulerLine'].includes(tool)) {
+    
+            // Ruler preview
+            if (isRulerDrawing && tool === 'rulerLine') {
+                setRulerLineEnd({ x, y }); 
+                commitCanvasToSnapshot();// update end point while dragging
+                return; // skip normal drawing
+                
+            }
+    
+            if (isDrawing && ['pen', 'eraser', 'line'].includes(tool)) {
                 drawLine(e);
             }
+    
+            // Add other tool previews if needed
         };
-
+    
         const handleUp = (e) => {
             if (isDraggingCompass) {
-                setIsDraggingCompass(false);
+              setIsDraggingCompass(false);
+              return;
+            }
+    
+            if (isRulerDrawing && tool === 'rulerLine' && rulerLineStart && rulerLineEnd) {
+                const ctx = contextRef.current;
+                ctx.beginPath();
+                ctx.moveTo(rulerLineStart.x, rulerLineStart.y);
+                ctx.lineTo(rulerLineEnd.x, rulerLineEnd.y);
+                ctx.stroke();
+                ctx.closePath();
+    
+                // reset ruler state
+                setIsRulerDrawing(false);
+                setRulerLineStart(null);
+                setRulerLineEnd(null);
+                commitCanvasToSnapshot();
                 return;
             }
-
-            if ((isDrawingCircle && tool === 'compass') || (isDrawing && ['pen', 'eraser', 'line'].includes(tool))) {
-                finishDrawing(e);
+    
+            if (
+              (isDrawingCircle && tool === 'compass') ||
+              (isDrawing && ['pen', 'eraser', 'line'].includes(tool))
+              
+            ) {
+              finishDrawing(e);
+              commitCanvasToSnapshot();
             }
         };
-
+    
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleUp);
         window.addEventListener('touchmove', handleMove);
         window.addEventListener('touchend', handleUp);
-
+    
         return () => {
             window.removeEventListener('mousemove', handleMove);
             window.removeEventListener('mouseup', handleUp);
             window.removeEventListener('touchmove', handleMove);
             window.removeEventListener('touchend', handleUp);
         };
-    }, [isDrawing, tool, drawLine, drawShapePreview, finishDrawing, contextRef, isDraggingCompass, dragStartOffset, setCompassPosition, getScaledCoordinates, setIsDraggingCompass, isDrawingCircle, pivotPoint, setCompassAngle]);
-
+    }, [isDrawing, tool, drawLine, finishDrawing, contextRef, isDraggingCompass, dragStartOffset, setCompassPosition, getScaledCoordinates, setIsDraggingCompass, isDrawingCircle, rulerLineStart, rulerLineEnd, isRulerDrawing]);
+    
     return {
         tool, setTool,
         color, setColor,

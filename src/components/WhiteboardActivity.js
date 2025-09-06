@@ -221,28 +221,27 @@ const WhiteboardActivity = () => {
     };
 
     const handleCanvasClick = (e) => {
-        if (!tool) return; // only block if no tool is selected
-        if (!canvasRef.current) return;
-
+        if (tool === "rulerLine") return; // don't draw shapes when ruler is active
+    
         const rect = canvasRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-
+    
         const newShape = {
             id: uuidv4(),
             type: tool,
-            x: x - 50, // center the shape at click
-            y: y - 50, // center the shape at click
+            x: x - 50,
+            y: y - 50,
             width: 100,
             height: 100,
             color: "lightblue",
             text: "",
-            rotation: 0, // rotation angle in degrees
+            rotation: 0,
         };
-
+    
         setShapes(prev => [...prev, newShape]);
     };
-
+    
 
 
     const updateShape = (updatedShape) => {
