@@ -238,31 +238,29 @@ const handleDelete = async (filePath) => {
 
 
   return (
-    <div
-      style={{
-        width: '340px',
-        backgroundColor: '#010141',
-        borderRight: '1px solid #ccc',
-        padding: '16px',
-        display: 'flex',
-        flexDirection: 'column',
-        fontFamily: 'sans-serif',
-        height: '100vh',
-        boxSizing: 'border-box',
-        color: '#fff',
-        borderTopRightRadius: '16px',
-        borderBottomRightRadius: '16px',
-        overflowY: "auto",  
-        overflowX: "hidden",
-        position: "fixed", 
-                maxWidth: '100%',
-                height: '100vh',
-    overflowY: "auto",
-    overflowX: "hidden",
-    position: "fixed", 
-    maxWidth: '100%',
-      }}
-    >
+   <div
+  style={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '340px',
+    height: '100vh',
+    backgroundColor: '#010141',
+    color: '#fff',
+    padding: '16px',
+    display: 'flex',
+    flexDirection: 'column',
+    boxSizing: 'border-box',
+    borderRight: '1px solid #ccc',
+    borderTopRightRadius: '16px',
+    borderBottomRightRadius: '16px',
+    overflowY: 'auto',    // ✅ ensures scrolling
+    overflowX: 'hidden',  // hide horizontal scroll
+    zIndex: 1000,
+  }}
+>
+
+
       <h4 style={{ marginBottom: '10px', fontSize: '18px', color: '#ffffff' }}>
         Attach File
       </h4>
@@ -407,49 +405,77 @@ const handleDelete = async (filePath) => {
           <li style={{ color: '#888', fontSize: '12px' }}>No files uploaded yet.</li>
         )}
       </ul>
-
       {selectedFileUrl && (
-        <div style={{ marginTop: '20px' }}>
-          <h5 style={{ fontSize: '14px', marginBottom: '8px' }}>Preview</h5>
-          {selectedFileType === 'image' ? (
-  <img
-    src={selectedFileUrl}
-    alt="Preview"
+  <div
     style={{
-      width: '100%',
-      maxHeight: '200px',
-      objectFit: 'contain',
+      marginTop: '20px',
+      height: '300px',              // fixed height
+      overflowY: 'auto',            // make scrollable
+      backgroundColor: '#fff',
       borderRadius: '6px',
+      padding: '8px',
       border: '1px solid #ccc',
+      display: 'flex',
+      flexDirection: 'column',
     }}
-  />
-) : selectedFileType === 'pdf' ? (
-  <iframe
-    src={selectedFileUrl}
-    width="100%"
-    height="260px"
-    title="PDF Preview"
-    style={{
-      border: '1px solid #ccc',
-      borderRadius: '6px',
-    }}
-  />
-) : (
-  <p style={{ fontSize: '12px', color: '#fff' }}>
-    Not previewable.{' '}
-    <a
-      href={selectedFileUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{ color: '#4A90E2', textDecoration: 'underline' }}
+  >
+    <h5
+      style={{
+        fontSize: '14px',
+        marginBottom: '8px',
+        color: '#000',
+        flexShrink: 0, // prevent heading from shrinking
+      }}
     >
-      Download
-    </a>
-  </p>
+      Preview
+    </h5>
+
+    <div
+      style={{
+        flex: 1,
+        overflowY: 'auto', // ✅ scrolling applies here
+        borderRadius: '4px',
+      }}
+    >
+      {selectedFileType === 'image' ? (
+        <img
+          src={selectedFileUrl}
+          alt="Preview"
+          style={{
+            width: '100%',
+            height: 'auto',
+            borderRadius: '6px',
+            display: 'block',
+          }}
+        />
+      ) : selectedFileType === 'pdf' ? (
+        <iframe
+          src={selectedFileUrl}
+          width="100%"
+          height="100%"       // fills scroll area
+          title="PDF Preview"
+          style={{
+            border: 'none',
+            borderRadius: '6px',
+          }}
+        />
+      ) : (
+        <p style={{ fontSize: '12px', color: '#000' }}>
+          Not previewable.{' '}
+          <a
+            href={selectedFileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#4A90E2', textDecoration: 'underline' }}
+          >
+            Download
+          </a>
+        </p>
+      )}
+    </div>
+  </div>
 )}
 
-        </div>
-      )}
       {extractedText && (
         <div
           ref={(ref) => (window.extractedBox = ref)}
