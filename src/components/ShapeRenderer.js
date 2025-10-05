@@ -23,3 +23,5 @@ export default function ShapeRenderer({ shapeType, color = "#E3ECDD", stroke = "
     </svg>
   );
 }
+
+

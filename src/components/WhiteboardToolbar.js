@@ -62,12 +62,13 @@ const WhiteboardToolbar = ({
         title="Line Width"
         className="w-24"
       />
-      <button onClick={handleUndo} className="btn" disabled={history.length <= 1} title="Undo">
-        <FaUndo />
-      </button>
-      <button onClick={handleRedo} className="btn" disabled={redoStack.length === 0} title="Redo">
-        <FaRedo />
-      </button>
+      <button onClick={handleUndo} className="btn" disabled={history.length === 0} title="Undo">
+  <FaUndo />
+</button>
+<button onClick={handleRedo} className="btn" disabled={redoStack.length === 0} title="Redo">
+  <FaRedo />
+</button>
+
       <button onClick={togglePanel}>📎</button>
       <button onClick={() => handleZoom(1.2)} className="btn" title="Zoom In">
         <FaPlus />

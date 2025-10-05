@@ -146,7 +146,7 @@ for (let i = 0; i <= maxCm * 10; i++) {
     }
   }
 }
- // ---- Bottom (inches) markings ----
+ // ---- Bottom  markings ---- 
 const bottomMarkings = [];
 const bottomOffset = RULER_HEIGHT; // ruler bottom edge
 const totalInches = Math.floor(RULER_WIDTH / INCH_TO_PIXELS); // only full inches
@@ -154,7 +154,6 @@ const totalInches = Math.floor(RULER_WIDTH / INCH_TO_PIXELS); // only full inche
 for (let i = 0; i <= totalInches; i++) {
   const x = i * INCH_TO_PIXELS;
 
-  // Make sure we stay inside ruler
   if (x > RULER_WIDTH) break;
 
   // Main inch line
@@ -171,7 +170,7 @@ for (let i = 0; i <= totalInches; i++) {
   );
 
   // Numbers
-  if (i !== 6) {
+  if (i !== 30) {
     bottomMarkings.push(
       <text
         key={`inch-text-${i}`}
@@ -187,12 +186,14 @@ for (let i = 0; i <= totalInches; i++) {
     );
   }
 
-  // Subdivisions (inside ruler only)
-  for (let j = 1; j < 8; j++) {
-    const subX = x + (j * INCH_TO_PIXELS) / 8;
-    if (subX >= RULER_WIDTH) continue; // skip those outside
+  // Subdivisions → ab 10 parts (9 chhoti lines har inch ke darmiyan)
+  for (let j = 1; j < 10; j++) {
+    const subX = x + (j * INCH_TO_PIXELS) / 10;
+    if (subX >= RULER_WIDTH) continue;
 
-    let subLength = j % 4 === 0 ? 8 : j % 2 === 0 ? 5 : 3;
+    // Tick length: quarter (biggest), half (medium), baqi chhoti
+    let subLength = j % 5 === 0 ? 8 : j % 2 === 0 ? 5 : 3;
+
     bottomMarkings.push(
       <line
         key={`sub-inch-${i}-${j}`}
@@ -206,6 +207,7 @@ for (let i = 0; i <= totalInches; i++) {
     );
   }
 }
+
 
 
   return (

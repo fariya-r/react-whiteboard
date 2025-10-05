@@ -9,11 +9,11 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import TopToolbar from "./TopToolbar";
-
 import useWhiteboardSocket from '../hooks/useWhiteboardSocket';
 import useBoardLoader from '../hooks/useBoardLoader';
 import WhiteboardTextLayer from '../components/WhiteboardTextLayer';
 import WhiteboardToolbar from '../components/WhiteboardToolbar';
+import GraphPlotter from "../components/GraphPlotter";
 import useCanvasDrawing from '../hooks/useCanvasDrawing';
 import StickyNote from './StickyNote';
 import useCanvasSnapshot from '../hooks/useCanvasSnapshot';
@@ -21,8 +21,6 @@ import Shape from '../components/Shape';
 import Protractor from "../components/Protractor";
 import Compass from './Compass';
 import { supabase } from './supabaseClient';
-
-// HAND TOUCH DRAWING SAVE NI HO RHI USY DAIKHNA HA OKAY
 
 const WhiteboardActivity = () => {
     const canvasRef = useRef(null);
@@ -87,6 +85,19 @@ const WhiteboardActivity = () => {
     const [boardLabel, setBoardLabel] = useState(null);
     const { id } = useParams();   // lesson id from URL
     const [rulerAngle, setRulerAngle] = useState(0);
+    const [showGraphTool, setShowGraphTool] = useState(false);
+    const [gridSize, setGridSize] = useState(20); // grid cell size in px
+    const [enableSnap, setEnableSnap] = useState(true); // toggle snapping
+
+
+    const snapToGrid = (x, y) => {
+        if (!enableSnap || !gridSize) return { x, y };
+        const gx = Math.round(x / gridSize) * gridSize;
+        const gy = Math.round(y / gridSize) * gridSize;
+        return { x: gx, y: gy };
+    };
+
+
 
     useEffect(() => {
         const fetchLesson = async () => {
@@ -215,22 +226,37 @@ const WhiteboardActivity = () => {
     };
 
 
-    const handleShapeClick = (selectedShape) => {
-        setTool(selectedShape);
-        setIsShapesMenuOpen(false);
+    const handleShapeClick = (shape) => {
+        setTool(shape);
+
+        // Ruler toggle ke liye
+        setShowRuler(shape === "rulerLine");
+
+        // Graph plotter toggle ke liye
+        if (shape === "graphPlotter") {
+            setShowGraphTool((prev) => !prev); // on/off toggle
+        } else {
+            setShowGraphTool(false); // koi aur tool select hote hi hide
+        }
     };
+
+
 
     const handleCanvasClick = (e) => {
         if (tool === "rulerLine") return; // don't draw shapes when ruler is active
-    
+
         const rect = canvasRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-    
+        let x = e.clientX - rect.left;
+        let y = e.clientY - rect.top;
+
+        const snapped = snapToGrid(x, y);
+        x = snapped.x;
+        y = snapped.y;
+
         const newShape = {
             id: uuidv4(),
             type: tool,
-            x: x - 50,
+            x: x - 50, // keep same offset logic if you want the shape centered on the click
             y: y - 50,
             width: 100,
             height: 100,
@@ -238,10 +264,11 @@ const WhiteboardActivity = () => {
             text: "",
             rotation: 0,
         };
-    
+
         setShapes(prev => [...prev, newShape]);
+
     };
-    
+
 
 
     const updateShape = (updatedShape) => {
@@ -276,7 +303,6 @@ const WhiteboardActivity = () => {
     useEffect(() => {
         const canvas = canvasRef.current;
         if (canvas) {
-            canvas.style.backgroundColor = backgroundColor;
         }
     }, [backgroundColor]);
 
@@ -317,22 +343,20 @@ const WhiteboardActivity = () => {
         setPivotPoint,
         currentPoint,
         setCurrentPoint,
-        rulerAngle
+        rulerAngle,
+        history,        // pass these down
+        setHistory,
+        redoStack,
+        setRedoStack
 
     );
 
-    const handleScroll = (e) => {
-        setScrollPosition({
-            x: e.target.scrollLeft,
-            y: e.target.scrollTop,
-        });
-    };
-
-
-    const { getSnapshotWithElements } = useCanvasSnapshot(
-        canvasRef, contextRef, backgroundSnapshot, circles
-    );
-    const { handleUndo, handleRedo, handleZoom, handleReset } = useWhiteboardActions(
+    const {
+        handleUndo,
+        handleRedo,
+        handleZoom,
+        handleReset
+    } = useWhiteboardActions(
         canvasRef,
         contextRef,
         history,
@@ -355,6 +379,20 @@ const WhiteboardActivity = () => {
         setTextEntries,
         setBackgroundSnapshot
     );
+
+    const handleScroll = (e) => {
+        setScrollPosition({
+            x: e.target.scrollLeft,
+            y: e.target.scrollTop,
+        });
+    };
+
+
+
+    const { getSnapshotWithElements } = useCanvasSnapshot(
+        canvasRef, contextRef, backgroundSnapshot, circles
+    );
+
     const { isAdminView, teacherUid } = useBoardLoader(
         board,
         setBoard,
@@ -421,12 +459,13 @@ const WhiteboardActivity = () => {
     useEffect(() => {
         if (canvasRef.current) {
             contextRef.current = canvasRef.current.getContext('2d');
-            canvasRef.current.width = 3000;
-            canvasRef.current.height = 3000;
+            canvasRef.current.width = 6000;    // increased
+            canvasRef.current.height = 6000;
             contextRef.current.lineCap = 'round';
             contextRef.current.lineJoin = 'round';
         }
     }, []);
+
 
     useEffect(() => {
         if (textareaRef.current) {
@@ -442,6 +481,7 @@ const WhiteboardActivity = () => {
             contextRef.current.lineWidth = lineWidth;
         }
     }, [color, lineWidth, contextRef]);
+
 
     const loadBoard = useCallback((boardToLoad) => {
         if (!canvasRef.current || !contextRef.current) {
@@ -482,7 +522,7 @@ const WhiteboardActivity = () => {
             contextRef.current.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
         };
 
-    }, [canvasRef, contextRef, setTextBoxes, setCircles, setExtractedTextState, setCurrentBoardId, setSelectedBoardId, setBackgroundSnapshot, setShowSavedBoards, setStickyNotes, setBackgroundColor]); // ✅ UPDATED DEPENDENCY ARRAY
+    }, [canvasRef, contextRef, setTextBoxes, setCircles, setExtractedTextState, setCurrentBoardId, setSelectedBoardId, setBackgroundSnapshot, setShowSavedBoards, setStickyNotes, setBackgroundColor]);
 
 
     useEffect(() => {
@@ -504,18 +544,20 @@ const WhiteboardActivity = () => {
 
 
     const handleSave = async () => {
+
         if (!user) {
+
             alert('Please log in to save');
             return;
         }
-    
         const canvas = canvasRef.current;
+
         if (!canvas) return;
-    
         const dataUrl = await getSnapshotWithElements(shapes, circles);
+
         const currentBackgroundColor = canvas.style.backgroundColor || "#ffffff";
+
         const label = boardLabel || "Untitled"; // Use a default label if none is set
-    
         if (currentBoardId) {
             await updateWhiteboard(
                 currentBoardId,
@@ -531,8 +573,11 @@ const WhiteboardActivity = () => {
                 currentBackgroundColor,
                 circles || [],
                 label
+
             );
+
         } else {
+
             const newId = await saveWhiteboard(
                 dataUrl,
                 tool || "pencil",
@@ -547,10 +592,11 @@ const WhiteboardActivity = () => {
                 circles || [],
                 label
             );
+
             setCurrentBoardId(newId);
         }
-    };
 
+    };
     const fetchSavedBoards = async () => {
         if (showSavedBoards) {
             setShowSavedBoards(false);
@@ -586,10 +632,67 @@ const WhiteboardActivity = () => {
     }, [setStickyNotes]);
 
 
-    return (
-        <div className="flex w-screen h-screen bg-white overflow-hidden">
+   return (
+  <div className="flex w-screen h-screen overflow-auto">
+    <div className="relative" style={{ width: "6000px", height: "6000px" }}>
+      
+      {/* 🔹 Grid Layer (always behind canvas, never disappears) */}
+      <div
+        className="absolute top-0 left-0 w-full h-full"
+        style={{
+            width: "6000px",
+    height: "6000px",
+          backgroundColor: "#001F54",
+          backgroundImage: `
+            linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: "50px 50px",
+          zIndex: 0,   // 👈 Grid always behind
+        }}
+      />
 
-            {(stickyNotes || []).map(note => (
+      <canvas
+        ref={canvasRef}
+        width={6000}
+        height={6000}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          backgroundColor: "transparent",
+          zIndex: 1,   
+
+        }}
+                    onTouchStart={handleTouchStart}
+  onTouchMove={handleTouchMove}
+  onTouchEnd={handleTouchEnd}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={isDrawing ? drawLine : undefined}
+                    onMouseUp={finishDrawing}
+                    onClick={(e) => {
+                        if (tool === "text") handleTextCanvasClick(e);
+                        else if (
+                            ['rectangle', 'circle', 'line', 'arrow', 'triangle', 'diamond', 'star', 'hexagon',
+                                'cylinder', 'arrow-left', 'arrow-right', 'arrow-both', 'brace-left', 'brace-right', 'cloud', 'plus',
+                                'trapezoid', 'parallelogram', 'octagon', 'speechBubble', 'hamburger'].includes(tool)
+                        ) {
+                            handleCanvasClick(e);  // now new shapes are included
+                        }
+                    }}
+
+                    className="cursor-crosshair"
+                />
+
+  {shapes.map((shape) => (
+    <Shape
+        key={shape.id}
+        shape={shape}
+        onUpdate={updateShape}
+        onDelete={deleteShape}
+    />
+))}
+ {(stickyNotes || []).map(note => (
                 <StickyNote
                     key={note.id}
                     note={note}
@@ -612,53 +715,6 @@ const WhiteboardActivity = () => {
             )}
 
 
-            <div
-                style={{
-                    width: "100%",
-                    height: "100%",
-                    overflow: "scroll",
-                    position: "relative",
-                    background: "#f0f0f0",
-                }}
-                onScroll={handleScroll}
-            >
-
-                <canvas
-                    ref={canvasRef}
-                    style={{
-                        background: "white",
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                    }}
-                    onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={isDrawing ? drawLine : undefined}
-                    onMouseUp={finishDrawing}
-                    onClick={(e) => {
-                        if (tool === "text") handleTextCanvasClick(e);
-                        else if (
-                            ['rectangle', 'circle', 'line', 'arrow', 'triangle', 'diamond', 'star', 'hexagon',
-                                'cylinder', 'arrow-left', 'arrow-right', 'arrow-both', 'brace-left', 'brace-right', 'cloud', 'plus',
-                                'trapezoid', 'parallelogram', 'octagon', 'speechBubble', 'hamburger'].includes(tool)
-                        ) {
-                            handleCanvasClick(e);  // now new shapes are included
-                        }
-                    }}
-
-                    className="cursor-crosshair"
-                />
-
-                {shapes.map((shape) => (
-                    <Shape
-                        key={shape.id}
-                        shape={shape}
-                        onUpdate={updateShape}
-                        onDelete={deleteShape}
-                    />
-                ))}
 
 
                 {/* ✅ Conditionally render Protractor */}
@@ -693,11 +749,20 @@ const WhiteboardActivity = () => {
 
             </div>
 
+            <TopToolbar
+                tool={tool}
+                setTool={setTool}
+                setShowRuler={setShowRuler}
+                showRuler={showRuler}
+                showGraphTool={showGraphTool}
+                setShowGraphTool={setShowGraphTool}
+            />
 
-
-
-
-
+            {showGraphTool && (
+                <div className="absolute top-24 left-24 z-50 bg-white shadow-lg rounded-lg p-4">
+                    <GraphPlotter />
+                </div>
+            )}
             <WhiteboardTextLayer
                 activeTextBox={activeTextBox}
                 setActiveTextBox={setActiveTextBox}
@@ -810,7 +875,6 @@ const WhiteboardActivity = () => {
                     />
                 )
             }
-            <TopToolbar tool={tool} setTool={setTool} setShowRuler={setShowRuler} />
 
             <WhiteboardToolbar
                 tool={tool}

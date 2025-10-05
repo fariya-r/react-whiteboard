@@ -113,6 +113,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'DELETE'],
   credentials: true
 }));
+const handwritingRoutes = require('./routes/handwriting');
+app.use('/api/handwriting', handwritingRoutes);
 
 app.use(express.json());
 app.use(bodyParser.json({ limit: '20mb' }));
@@ -133,7 +135,6 @@ app.use('/api/teacher', deleteTeacherRoute);
 
 
 app.post('/api/upload-recording', upload.single('file'), (req, res) => {
-  console.log("📥 Upload route hit on Railway!");
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }

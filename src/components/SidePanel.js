@@ -57,21 +57,26 @@ const handleUpload = async () => {
 };
 
 
-  // 🗑 Delete
-  const handleDelete = async (filePath) => {
-    if (!userId) {
-      toast.error("User ID not found. Cannot delete file.");
-      return;
-    }
-    try {
-      await axios.delete(`${baseUrl}/api/files/${encodeURIComponent(filePath)}`);
-      toast.success("File deleted successfully");
-      fetchFiles(userId);
-    } catch (error) {
-      console.error("❌ Delete error:", error);
-      toast.error("Failed to delete file");
-    }
-  };
+const handleDelete = async (filePath) => {
+  if (!userId) {
+    toast.error("User ID not found. Cannot delete file.");
+    return;
+  }
+  try {
+    const { error } = await supabase
+      .storage
+      .from("user-files")
+      .remove([filePath]);
+
+    if (error) throw error;
+
+    toast.success("File deleted successfully");
+    fetchFiles(userId);
+  } catch (error) {
+    console.error("❌ Delete error:", error.message);
+    toast.error("Failed to delete file: " + error.message);
+  }
+};
 
   // 📂 Fetch
   const fetchFiles = async (uid) => {
@@ -383,18 +388,19 @@ const handleUpload = async () => {
 </button>
 
 
-              <button
-                onClick={() => handleDelete(fileItem.file_path)}
-                style={{
-                  color: 'red',
-                  fontSize: '12px',
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                🗑
-              </button>
+<button
+  onClick={() => handleDelete(fileItem.path)}
+  style={{
+    color: 'red',
+    fontSize: '12px',
+    border: 'none',
+    background: 'none',
+    cursor: 'pointer',
+  }}
+>
+  🗑
+</button>
+
             </li>
           ))
         ) : (

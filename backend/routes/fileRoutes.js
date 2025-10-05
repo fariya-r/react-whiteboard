@@ -14,7 +14,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "No file or user ID uploaded" });
     }
 
-    const filePath = `${userId}/${Date.now()}-${file.filename}`;
+    const filePath = `${userId}/${Date.now()}-${file.originalname}`;
 
     const { error: uploadError } = await supabase.storage
       .from("user-files")
@@ -34,11 +34,12 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
       return res.json({
         message: "Uploaded successfully",
-        url: publicData.publicUrl,  
-        filePath,                   
-        filename: file.filename, // ✅ user’s actual filename
-        mimeType: file.mimetype,         // ✅ file type for preview logic
+        url: publicData.publicUrl,
+        filePath,                 // 👈 exact path you need for delete
+        filename: file.originalname, // 👈 real filename, not undefined
+        mimeType: file.mimetype,
       });
+      
       
       
   } catch (err) {

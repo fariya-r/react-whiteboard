@@ -4,6 +4,7 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { Link } from 'react-router-dom';
 import { useNavigate } from "react-router-dom";
+import RightAnimation from "../components/RightAnimation";
 
 export default function Signup() {
   const [name, setName] = useState('');
@@ -17,7 +18,6 @@ export default function Signup() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 🔑 Role logic
       let role = "Student";
       if (email.endsWith("@school.edu")) {
         role = "Teacher";
@@ -26,7 +26,7 @@ export default function Signup() {
       await setDoc(doc(db, "users", user.uid), {
         name: name,
         email: user.email,
-        role: role,
+        role,
         assignedClasses: [],
         savedBoards: [],
         sessionHistory: []
@@ -41,6 +41,8 @@ export default function Signup() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-white p-0 font-sans overflow-hidden">
       <div className="flex flex-col lg:flex-row max-w-6xl w-full h-screen">
+        
+        {/* Left Section - Signup Form */}
         <div className="w-full lg:w-1/2 p-6 sm:p-8 md:p-10 flex flex-col justify-between h-full overflow-hidden">
           <div className="flex-shrink-0">
             <h2 className="text-3xl font-bold mb-2 text-gray-800">Sign Up</h2>
@@ -52,8 +54,8 @@ export default function Signup() {
             </p>
           </div>
 
+          {/* Middle part: Form Inputs */}
           <div className="flex-grow flex flex-col justify-center space-y-4">
-
             {/* Name Input */}
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -120,21 +122,19 @@ export default function Signup() {
             </div>
 
             {/* Sign Up Button */}
-            <button
-              onClick={signupWithEmail}
-              className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white py-3 rounded-xl text-lg font-semibold shadow-lg hover:from-blue-600 hover:to-blue-800 transition duration-300 transform hover:scale-105"
-            >
-              Sign Up
-            </button>
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={signupWithEmail}
+                className="w-full max-w-xs bg-indigo-900 text-white py-2.5 px-4 rounded-lg text-base font-medium shadow-md hover:bg-indigo-800 hover:shadow-lg transition-all duration-300 ease-in-out"
+              >
+                Sign Up
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Right Section: Logo */}
-        <div className="w-full lg:w-1/2 bg-blue-600 rounded-3xl shadow-2xl p-8 sm:p-12 md:p-16 flex items-center justify-center relative overflow-hidden">
-          <div className="text-white flex items-center justify-center w-full h-full">
-            <img src="/assests/logo.png" alt="Logo" className="max-w-xs w-full" />
-          </div>
-        </div>
+        {/* Right Section - Same Animation as Login */}
+        <RightAnimation />
       </div>
     </div>
   );

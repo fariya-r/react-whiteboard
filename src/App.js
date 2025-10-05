@@ -9,6 +9,7 @@ import Dashboard from './components/Dashboard';
 import AdminDashboard from './components/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import SidePanel from './components/SidePanel';
+
 import TeacherWhiteboards from './components/TeacherWhiteboards';
 
 import RealtimeCollaborationManager, { generateWhiteboardId } from './components/RealtimeCollaborationManager'; // Adjust the path if your component is in a different folder

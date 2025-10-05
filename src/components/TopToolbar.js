@@ -13,6 +13,26 @@ const SquareIcon = ({ className }) => (
   </svg>
 );
 
+const GraphPlotterIcon = ({ className }) => (
+  <svg
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 512 512"
+    fill="currentColor"
+  >
+    {/* X and Y axis */}
+    <line x1="50" y1="450" x2="450" y2="450" stroke="currentColor" strokeWidth="20" />
+    <line x1="50" y1="450" x2="50" y2="50" stroke="currentColor" strokeWidth="20" />
+
+    {/* Simple plotted line */}
+    <polyline
+      points="50,400 150,300 250,200 350,150 450,100"
+      stroke="currentColor"
+      strokeWidth="10"
+      fill="none"
+    />
+  </svg>
+);
 
 const CircleIcon = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512z"/></svg>
@@ -214,14 +234,25 @@ const ShapeRenderer = ({ shapeType, stroke }) => {
   );
 };
 
-// The component now accepts `showRuler` as a prop.
-const TopToolbar = ({ tool, setTool, setShowRuler, showRuler }) => {
-  const [expanded, setExpanded] = useState(true);
+const TopToolbar = ({ 
+  tool, 
+  setTool, 
+  setShowRuler, 
+  showRuler, 
+  showGraphTool,      // add this
+  setShowGraphTool    // add this
+}) => {  const [expanded, setExpanded] = useState(true);
 
   const handleShapeClick = (shape) => {
     setTool(shape);
-    setShowRuler(shape === 'rulerLine'); // true only if ruler is selected
+    setShowRuler(shape === 'rulerLine');
+    if (shape === 'graphPlotter') {
+      setShowGraphTool(prev => !prev); // toggle WhiteboardActivity state
+    } else {
+      setShowGraphTool(false); // hide if another tool selected
+    }
   };
+
   
   
 
@@ -424,6 +455,17 @@ const TopToolbar = ({ tool, setTool, setShowRuler, showRuler }) => {
           >
             <HamburgerIcon className="w-8 h-8 text-gray-700" />
           </button>
+
+          <button
+        onClick={() => handleShapeClick('graphPlotter')}
+        title="Graph Plotter"
+        className={`${buttonBaseClasses} ${buttonHoverClass} ${showGraphTool ? "bg-blue-300" : ""}`}
+      >
+        <GraphPlotterIcon className="w-8 h-8 text-black" />
+      </button>
+
+
+
 
           {/* This button now toggles the ruler's visibility on and off */}
           <button

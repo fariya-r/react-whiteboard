@@ -7,6 +7,8 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { Link } from 'react-router-dom';
 import { useNavigate } from "react-router-dom";
 import { FacebookAuthProvider } from "firebase/auth";
+import RightAnimation from "../components/RightAnimation";
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -104,15 +106,9 @@ export default function Login() {
   };
 
   return (
-    // Outer container to center the entire content block on the screen
     <div className="min-h-screen flex items-center justify-center bg-white p-0 font-sans overflow-hidden">
-      {/* Main layout container: This div holds both the left (form) and right (blue box) sections.
-          It does NOT have its own background, shadow, or rounded corners, as per your request. */}
       <div className="flex flex-col lg:flex-row max-w-6xl w-full h-screen">
-        {/* Left Section: Login Form and Text - No background, no shadow, no explicit rounded corners.
-            It will blend with the 'bg-gray-100' of the outer container. */}
         <div className="w-full lg:w-1/2 p-6 sm:p-8 md:p-10 flex flex-col justify-between h-full overflow-hidden">
-          {/* Top part: CRM Logo and Sign In text */}
           <div className="flex-shrink-0">
 
 
@@ -235,17 +231,8 @@ export default function Login() {
         </div>
 
         
-        <div
-          className="w-full lg:w-1/2 rounded-3xl shadow-2xl p-8 sm:p-12 md:p-16 flex items-center justify-center relative overflow-hidden"
-          style={{ backgroundColor: '#010141' }}
-        >
+        <RightAnimation />
 
-          <div className="text-white flex flex-col items-center justify-center w-full h-full">
-            <img src="assets/logo.png" alt="Logo" className="max-w-xs w-full mb-4" />
-            <h2 className="text-2xl font-semibold">eBoard by e.Solutions</h2>
-            <p className="text-sm mt-2 text-white text-center">Empowering digital classrooms</p>
-          </div>
-        </div>
 
       </div>
     </div>

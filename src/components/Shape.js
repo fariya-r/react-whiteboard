@@ -50,6 +50,30 @@ const Shape = ({ shape, onUpdate, onDelete }) => {
     );
   };
 
+  // --- MEASUREMENT CALCULATION (cm units) ---
+const calcMeasurements = () => {
+  const pxToCm = (px) => (px * 2.54 / 96).toFixed(2); // convert px → cm with 2 decimals
+
+  if (shape.type === "circle") {
+    const r = shape.width / 2;
+    return {
+      label: `r = ${pxToCm(r)} cm`,
+      area: (Math.PI * Math.pow(r * 2.54 / 96, 2)).toFixed(2), // area in cm²
+      perimeter: (2 * Math.PI * (r * 2.54 / 96)).toFixed(2),   // perimeter in cm
+    };
+  } else {
+    const w = shape.width;
+    const h = shape.height;
+    return {
+      label: `${pxToCm(w)} cm × ${pxToCm(h)} cm`,
+      area: (w * 2.54 / 96 * h * 2.54 / 96).toFixed(2), // area in cm²
+      perimeter: (2 * (w * 2.54 / 96 + h * 2.54 / 96)).toFixed(2), // perimeter in cm
+    };
+  }
+};
+
+  const { label, area, perimeter } = calcMeasurements();
+
   return (
     <Rnd
       size={{ width: shape.width, height: shape.height }}
@@ -122,6 +146,29 @@ const Shape = ({ shape, onUpdate, onDelete }) => {
                 zIndex: 20,
               }}
             />
+
+<div
+  style={{
+    position: "absolute",
+    bottom: "-50px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    background: "rgba(0,0,0,0.75)",
+    color: "white",
+    fontSize: "10px",
+    padding: "4px 6px",
+    borderRadius: "4px",
+    pointerEvents: "none",
+    textAlign: "center",
+    whiteSpace: "nowrap",
+  }}
+>
+  <div>{label}</div>
+  <div>Area: {area} cm²</div>
+  <div>Perimeter: {perimeter} cm</div>
+  <div>Angle: {Math.round(shape.rotation || 0)}°</div>
+</div>
+
           </>
         )}
       </div>
