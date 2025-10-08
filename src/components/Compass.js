@@ -189,7 +189,9 @@ const Compass = ({
           left: `${position.x - svgCenter}px`,
           top: `${position.y - svgCenter}px`,
           cursor: interactionMode ? "grabbing" : "grab",
+          zIndex: 1000, // Add this line
         }}
+        
         onMouseMove={handleMove}
         onMouseUp={handleEnd}
         onTouchMove={handleMove}

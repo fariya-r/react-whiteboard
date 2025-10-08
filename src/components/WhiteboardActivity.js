@@ -21,6 +21,7 @@ import Shape from '../components/Shape';
 import Protractor from "../components/Protractor";
 import Compass from './Compass';
 import { supabase } from './supabaseClient';
+import { drawGridBackground } from "../utils/drawGridBackground";
 
 const WhiteboardActivity = () => {
     const canvasRef = useRef(null);
@@ -40,7 +41,7 @@ const WhiteboardActivity = () => {
     const [scale, setScale] = useState(1);
     const [history, setHistory] = useState([]);
     const [redoStack, setRedoStack] = useState([]);
-    const [backgroundColor, setBackgroundColor] = useState('#ffffff');
+    // const [backgroundColor, setBackgroundColor] = useState('#ffffff');
     const [showRuler, setShowRuler] = useState(false);
     const [scrollPosition, setScrollPosition] = useState({ x: 0, y: 0 });
     const [rulerPosition, setRulerPosition] = useState({ x: 50, y: 50 });
@@ -88,6 +89,9 @@ const WhiteboardActivity = () => {
     const [showGraphTool, setShowGraphTool] = useState(false);
     const [gridSize, setGridSize] = useState(20); // grid cell size in px
     const [enableSnap, setEnableSnap] = useState(true); // toggle snapping
+const [backgroundColor, setBackgroundColor] = useState("#001F54"); // default dark blue
+const [gridColor, setGridColor] = useState("#001F54");
+    const gridCanvasRef = useRef(null);
 
 
     const snapToGrid = (x, y) => {
@@ -96,8 +100,18 @@ const WhiteboardActivity = () => {
         const gy = Math.round(y / gridSize) * gridSize;
         return { x: gx, y: gy };
     };
+useEffect(() => {
+  setGridColor(backgroundColor);
+}, [backgroundColor]);
 
 
+    useEffect(() => {
+        const canvas = gridCanvasRef.current;
+        if (!canvas) return;
+      
+        drawGridBackground(canvas, gridColor, gridSize);
+      }, [gridColor, gridSize]); // ← important: depend on color + size
+      
 
     useEffect(() => {
         const fetchLesson = async () => {
@@ -642,8 +656,8 @@ const WhiteboardActivity = () => {
         style={{
             width: "6000px",
     height: "6000px",
-          backgroundColor: "#001F54",
-          backgroundImage: `
+    backgroundColor: gridColor,
+    backgroundImage: `
             linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
             linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)
           `,

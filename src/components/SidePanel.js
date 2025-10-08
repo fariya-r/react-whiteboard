@@ -248,14 +248,13 @@ const handleDelete = async (filePath) => {
     backgroundColor: '#010141',
     color: '#fff',
     padding: '16px',
-    display: 'flex',
-    flexDirection: 'column',
+    display: 'block', // ✅ no need for flex when scrolling entire panel
     boxSizing: 'border-box',
     borderRight: '1px solid #ccc',
     borderTopRightRadius: '16px',
     borderBottomRightRadius: '16px',
-    overflowY: 'auto',    // ✅ ensures scrolling
-    overflowX: 'hidden',  // hide horizontal scroll
+    overflowY: 'auto',   // ✅ enables full panel scroll
+    overflowX: 'hidden',
     zIndex: 1000,
   }}
 >
@@ -342,10 +341,7 @@ const handleDelete = async (filePath) => {
           backgroundColor: '#ffffff',
           borderRadius: '6px',
           color: '#000',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          flex: 1, // Add flex: 1 here to make it take up available space
-          minHeight: '0', // Important for flex containers with overflow
+          
         }}
       >
         {Array.isArray(filesList) && filesList.length > 0 ? (
