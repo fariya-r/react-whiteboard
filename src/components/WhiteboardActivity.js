@@ -23,6 +23,8 @@ import ThreeDShapes from "./ThreeDShapes";
 import Compass from './Compass';
 import { supabase } from './supabaseClient';
 import { drawGridBackground } from "../utils/drawGridBackground";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
 
 const WhiteboardActivity = () => {
     const canvasRef = useRef(null);
