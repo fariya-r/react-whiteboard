@@ -123,17 +123,22 @@ const handleDelete = async (filePath) => {
   const handleFileClick = (fileItem) => {
     setSelectedFileUrl(fileItem.url);
   
-    // Get file extension
     const ext = fileItem.name.split('.').pop().toLowerCase();
   
     if (['jpg', 'jpeg', 'png'].includes(ext)) {
       setSelectedFileType('image');
-    } else if (ext === 'pdf') {
+    } 
+    else if (ext === 'pdf') {
       setSelectedFileType('pdf');
-    } else {
+    } 
+    else if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) {
+      setSelectedFileType('office');   // ⭐ NEW
+    } 
+    else {
       setSelectedFileType('unknown');
     }
   };
+  
     
   
   
@@ -433,41 +438,50 @@ const handleDelete = async (filePath) => {
         borderRadius: '4px',
       }}
     >
-      {selectedFileType === 'image' ? (
-        <img
-          src={selectedFileUrl}
-          alt="Preview"
-          style={{
-            width: '100%',
-            height: 'auto',
-            borderRadius: '6px',
-            display: 'block',
-          }}
-        />
-      ) : selectedFileType === 'pdf' ? (
-        <iframe
-          src={selectedFileUrl}
-          width="100%"
-          height="100%"       // fills scroll area
-          title="PDF Preview"
-          style={{
-            border: 'none',
-            borderRadius: '6px',
-          }}
-        />
-      ) : (
-        <p style={{ fontSize: '12px', color: '#000' }}>
-          Not previewable.{' '}
-          <a
-            href={selectedFileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: '#4A90E2', textDecoration: 'underline' }}
-          >
-            Download
-          </a>
-        </p>
-      )}
+      {selectedFileType === 'image' && (
+  <img
+    src={selectedFileUrl}
+    alt="Preview"
+    style={{ width: '100%', borderRadius: '6px' }}
+  />
+)}
+
+{selectedFileType === 'pdf' && (
+  <iframe
+    src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(selectedFileUrl)}`}
+    width="100%"
+    height="100%"
+    title="PDF Preview"
+    style={{ border: 'none', borderRadius: '6px' }}
+  />
+)}
+
+
+{selectedFileType === 'office' && (
+  <iframe
+    src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(selectedFileUrl)}`}
+    width="100%"
+    height="100%"
+    title="Office Preview"
+    style={{ border: 'none', borderRadius: '6px' }}
+  />
+)}
+
+
+{selectedFileType === 'unknown' && (
+  <p style={{ fontSize: '12px', color: '#000' }}>
+    Not previewable.{' '}
+    <a
+      href={selectedFileUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ color: '#4A90E2' }}
+    >
+      Download
+    </a>
+  </p>
+)}
+
     </div>
   </div>
 )}

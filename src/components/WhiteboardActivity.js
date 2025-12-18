@@ -19,6 +19,7 @@ import StickyNote from './StickyNote';
 import useCanvasSnapshot from '../hooks/useCanvasSnapshot';
 import Shape from '../components/Shape';
 import Protractor from "../components/Protractor";
+import ThreeDShapes from "./ThreeDShapes";
 import Compass from './Compass';
 import { supabase } from './supabaseClient';
 import { drawGridBackground } from "../utils/drawGridBackground";
@@ -649,7 +650,8 @@ useEffect(() => {
    return (
   <div className="flex w-screen h-screen overflow-auto">
     <div className="relative" style={{ width: "6000px", height: "6000px" }}>
-      
+    <div id="three-container" style={{ width: "300px", height: "300px" }}></div>
+
       {/* 🔹 Grid Layer (always behind canvas, never disappears) */}
       <div
         className="absolute top-0 left-0 w-full h-full"
@@ -665,6 +667,26 @@ useEffect(() => {
           zIndex: 0,   // 👈 Grid always behind
         }}
       />
+{tool.startsWith("3d-") && (
+  <div
+    style={{
+      position: "absolute",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      zIndex: 5, // higher than your 2D canvas
+      pointerEvents: "none", // so it doesn't block mouse drawing
+    }}
+  >
+    <Canvas camera={{ position: [5, 5, 5] }}>
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[10, 10, 5]} />
+      <ThreeDShapes selectedShape={tool} />
+      <OrbitControls />
+    </Canvas>
+  </div>
+)}
 
       <canvas
         ref={canvasRef}
@@ -687,9 +709,13 @@ useEffect(() => {
                     onClick={(e) => {
                         if (tool === "text") handleTextCanvasClick(e);
                         else if (
-                            ['rectangle', 'circle', 'line', 'arrow', 'triangle', 'diamond', 'star', 'hexagon',
-                                'cylinder', 'arrow-left', 'arrow-right', 'arrow-both', 'brace-left', 'brace-right', 'cloud', 'plus',
-                                'trapezoid', 'parallelogram', 'octagon', 'speechBubble', 'hamburger'].includes(tool)
+                            [
+                                'rectangle', 'circle', 'line', 'arrow', 'triangle', 'diamond', 'star',
+                                'hexagon', 'cylinder', 'arrow-left', 'arrow-right', 'arrow-both',
+                                'brace-left', 'brace-right', 'cloud', 'plus', 'trapezoid', 'parallelogram',
+                                'octagon', 'speechBubble', 'hamburger'
+                              ].includes(tool)
+                               
                         ) {
                             handleCanvasClick(e);  // now new shapes are included
                         }
@@ -697,6 +723,10 @@ useEffect(() => {
 
                     className="cursor-crosshair"
                 />
+setTool("3d-cube"); // cube
+setTool("3d-sphere"); // sphere
+setTool("3d-pyramid"); // pyramid
+
 
   {shapes.map((shape) => (
     <Shape
@@ -889,6 +919,7 @@ useEffect(() => {
                     />
                 )
             }
+      <ThreeDShapes />
 
             <WhiteboardToolbar
                 tool={tool}

@@ -291,9 +291,21 @@ function rotatePoint(x, y, centerX, centerY, angle) {
         if (tool === 'pen') {
             contextRef.current.lineTo(x, y);
             contextRef.current.stroke();
-        } else if (tool === 'eraser') {
-            contextRef.current.clearRect(x - lineWidth / 2, y - lineWidth / 2, lineWidth, lineWidth);
+          } else if (tool === 'eraser') {
+            const ctx = contextRef.current;
+            const radius = lineWidth * 3;   // Increase eraser size (adjust as you like)
+        
+            ctx.save();
+            ctx.globalCompositeOperation = "destination-out";  // REMOVE pixels
+        
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+            ctx.fill();
+        
+            ctx.restore();
         }
+        
+        
        if (tool === 'rulerLine' && rulerLineStart && rulerLineEnd && rulerSnapshotImg.current) {
     const ctx = contextRef.current;
 

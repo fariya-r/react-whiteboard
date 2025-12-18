@@ -1,5 +1,76 @@
 export const shapesConfig = {
     // --- Basic shapes ---
+    cube3d: {
+      type: "div",
+      render: (color) => (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            background: `linear-gradient(135deg, ${color}, #333)`,
+            border: "2px solid #000",
+            transform: "skewY(-10deg)",
+          }}
+        />
+      ),
+    },
+    cylinder3d: {
+      type: "svg",
+      viewBox: "0 0 100 120",
+      render: (color, stroke, strokeWidth) => (
+        <>
+          <ellipse cx="50" cy="20" rx="40" ry="15" fill={color} stroke={stroke} strokeWidth={strokeWidth} />
+          <rect x="10" y="20" width="80" height="80" fill={`url(#cylShade)`} stroke={stroke} strokeWidth={strokeWidth} />
+    
+          <ellipse cx="50" cy="100" rx="40" ry="15" fill={color} stroke={stroke} strokeWidth={strokeWidth} />
+    
+          <defs>
+            <linearGradient id="cylShade" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#00000022" />
+              <stop offset="50%" stopColor={color} />
+              <stop offset="100%" stopColor="#00000022" />
+            </linearGradient>
+          </defs>
+        </>
+      ),
+    },
+    pyramid3d: {
+      type: "svg",
+      viewBox: "0 0 100 100",
+      render: (color) => (
+        <>
+          <polygon points="50,10 90,90 10,90" fill={`url(#pyrShade)`} stroke="#333" strokeWidth="2" />
+    
+          <defs>
+            <linearGradient id="pyrShade" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={color} />
+              <stop offset="100%" stopColor="#000" stopOpacity="0.3" />
+            </linearGradient>
+          </defs>
+        </>
+      ),
+    },
+    sphere3d: {
+      type: "svg",
+      viewBox: "0 0 100 100",
+      render: (color) => (
+        <>
+          <circle cx="50" cy="50" r="45" fill={`url(#sphereLight)`} />
+    
+          <defs>
+            <radialGradient id="sphereLight">
+              <stop offset="0%" stopColor="#fff" stopOpacity="0.7" />
+              <stop offset="40%" stopColor={color} />
+              <stop offset="100%" stopColor="#000" stopOpacity="0.4" />
+            </radialGradient>
+          </defs>
+        </>
+      ),
+    },
+            
+
+
+
     rectangle: {
       type: "svg",
       viewBox: "0 0 100 100",
