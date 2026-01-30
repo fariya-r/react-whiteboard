@@ -1,7 +1,8 @@
 // routes/getTeachers.js
 const express = require('express');
 const router = express.Router();
-const { db } = require('../firebaseAdmin');
+const admin = require('firebase-admin');
+const db = admin.firestore();
 
 // GET /api/teachers
 router.get('/teachers', async (req, res) => {

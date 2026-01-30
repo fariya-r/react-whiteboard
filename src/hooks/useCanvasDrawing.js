@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback,useRef } from 'react';
+import useCircularEraser from "./useCircularEraser";
+import use3DShapes from "./use3DShapes";
 
 const useCanvasDrawing = (
     canvasRef,
@@ -63,9 +65,45 @@ const useCanvasDrawing = (
       setRedoStack([]);
       setBackgroundSnapshot(snapshot);
     }, [canvasRef, contextRef, setBackgroundSnapshot, setHistory, setRedoStack]);
+    const getScaledCoordinates = useCallback((e) => {
+      if (!e || !canvasRef.current) return { x: 0, y: 0 };
+      const rect = canvasRef.current.getBoundingClientRect();
+      let clientX, clientY;
+
+      if (e.touches && e.touches.length > 0) {
+          clientX = e.touches[0].clientX;
+          clientY = e.touches[0].clientY;
+      } else if (e.changedTouches && e.changedTouches.length > 0) {
+          clientX = e.changedTouches[0].clientX;
+          clientY = e.changedTouches[0].clientY;
+      } else {
+          clientX = e.clientX;
+          clientY = e.clientY;
+      }
+
+      const x = (clientX - rect.left) / scale;
+      const y = (clientY - rect.top) / scale;
+      return { x, y };
+  }, [canvasRef, scale]);
+    const {
+      drawEraserPreview,
+      eraseAtPoint,
+      handleEraserMove
+    } = useCircularEraser(canvasRef, contextRef, getScaledCoordinates);
     
-     
-      
+    const {
+      start3DShape,
+      update3DShape,
+      finish3DShape,
+      render3DShapes,
+      isDrawing3D
+    } = use3DShapes(
+      canvasRef,
+      contextRef,
+      getScaledCoordinates,
+      saveSnapshot
+    );
+    
     const handleUpdateStickyNoteSize = useCallback((id, newSize) => {
         setStickyNotes(prevNotes =>
             prevNotes.map(note =>
@@ -86,26 +124,7 @@ const useCanvasDrawing = (
         );
     }, [compassPosition]);
 
-    const getScaledCoordinates = useCallback((e) => {
-        if (!e || !canvasRef.current) return { x: 0, y: 0 };
-        const rect = canvasRef.current.getBoundingClientRect();
-        let clientX, clientY;
-
-        if (e.touches && e.touches.length > 0) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-        } else if (e.changedTouches && e.changedTouches.length > 0) {
-            clientX = e.changedTouches[0].clientX;
-            clientY = e.changedTouches[0].clientY;
-        } else {
-            clientX = e.clientX;
-            clientY = e.clientY;
-        }
-
-        const x = (clientX - rect.left) / scale;
-        const y = (clientY - rect.top) / scale;
-        return { x, y };
-    }, [canvasRef, scale]);
+    
 
     const handleProtractorDrag = useCallback((x, y) => {
         setProtractorPosition({ x: x, y: y });
@@ -234,10 +253,17 @@ const useCanvasDrawing = (
         // Removed logic for 'lined' tool
         // if (tool === 'lined') { ... }
 
-        if (tool === 'pen' || tool === 'eraser') {
-            contextRef.current.beginPath();
-            contextRef.current.moveTo(x, y);
-            setIsDrawing(true);
+        if (tool === 'pen') {
+          const ctx = contextRef.current;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          setIsDrawing(true);
+          return;
+        }
+      
+        if (tool === 'eraser') {
+          setIsDrawing(true);   // ❌ no beginPath
+          return;
         } if (tool === 'rulerLine') {
             const { x, y } = getScaledCoordinates(e);
             setRulerLineStart({ x, y });
@@ -291,19 +317,8 @@ function rotatePoint(x, y, centerX, centerY, angle) {
         if (tool === 'pen') {
             contextRef.current.lineTo(x, y);
             contextRef.current.stroke();
-          } else if (tool === 'eraser') {
-            const ctx = contextRef.current;
-            const radius = lineWidth * 3;   // Increase eraser size (adjust as you like)
-        
-            ctx.save();
-            ctx.globalCompositeOperation = "destination-out";  // REMOVE pixels
-        
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, Math.PI * 2, false);
-            ctx.fill();
-        
-            ctx.restore();
-        }
+          } 
+          
         
         
        if (tool === 'rulerLine' && rulerLineStart && rulerLineEnd && rulerSnapshotImg.current) {
@@ -355,9 +370,12 @@ function rotatePoint(x, y, centerX, centerY, angle) {
           return;
         }
       
-        if (tool === 'pen' || tool === 'eraser') {
-          ctx.closePath();
+        if (tool === 'eraser') {
+          setIsDrawing(false);
+          saveSnapshot();
+          return;
         }
+        
       
         if (isRulerDrawing && tool === 'rulerLine' && rulerLineStart && rulerLineEnd) {
           ctx.beginPath();
@@ -433,6 +451,9 @@ function rotatePoint(x, y, centerX, centerY, angle) {
           
            else {
           startDrawing(e);
+        } if (tool.startsWith("3d-")) {
+          start3DShape(e, color);
+          return; 
         }
       }, [tool, contextRef, startDrawing]);
       
@@ -481,10 +502,20 @@ function rotatePoint(x, y, centerX, centerY, angle) {
       
             return; // important: stop pen/eraser logic
           }
-      
-          if (isDrawing && ['pen', 'eraser', 'line'].includes(tool)) {
-            drawLine(e);
+          if (tool === 'eraser') {
+            handleEraserMove(e);        // cursor follow
+            if (isDrawing) {
+              eraseAtPoint(x, y);       // circular erase
+            }
+            return;
           }
+      if (isDrawing && ['pen', 'line'].includes(tool)) {
+      drawLine(e);
+      if (tool.startsWith("3d-")) {
+        update3DShape(e);
+        return;
+      }
+    }
         };
       
         const handleUp = (e) => {
@@ -532,7 +563,10 @@ const lengthCm = (lengthPx / pxPerCm).toFixed(1); // px ko cm me convert
             saveSnapshot(); // text bhi snapshot me save hoga
             return;
           }
-          
+          if (tool.startsWith("3d-")) {
+            finish3DShape();
+            return;
+          }
       
           if (
             (isDrawingCircle && tool === 'compass') ||

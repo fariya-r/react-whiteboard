@@ -92,10 +92,11 @@ const WhiteboardActivity = () => {
     const [showGraphTool, setShowGraphTool] = useState(false);
     const [gridSize, setGridSize] = useState(20); // grid cell size in px
     const [enableSnap, setEnableSnap] = useState(true); // toggle snapping
-const [backgroundColor, setBackgroundColor] = useState("#001F54"); // default dark blue
-const [gridColor, setGridColor] = useState("#001F54");
+    const [backgroundColor, setBackgroundColor] = useState("#001F54"); // default dark blue
+    const [gridColor, setGridColor] = useState("#001F54");
     const gridCanvasRef = useRef(null);
-
+    
+      
 
     const snapToGrid = (x, y) => {
         if (!enableSnap || !gridSize) return { x, y };
@@ -103,18 +104,18 @@ const [gridColor, setGridColor] = useState("#001F54");
         const gy = Math.round(y / gridSize) * gridSize;
         return { x: gx, y: gy };
     };
-useEffect(() => {
-  setGridColor(backgroundColor);
-}, [backgroundColor]);
+    useEffect(() => {
+        setGridColor(backgroundColor);
+    }, [backgroundColor]);
 
 
     useEffect(() => {
         const canvas = gridCanvasRef.current;
         if (!canvas) return;
-      
+
         drawGridBackground(canvas, gridColor, gridSize);
-      }, [gridColor, gridSize]); // ← important: depend on color + size
-      
+    }, [gridColor, gridSize]); // ← important: depend on color + size
+
 
     useEffect(() => {
         const fetchLesson = async () => {
@@ -334,7 +335,6 @@ useEffect(() => {
         protractorPosition,
         finalizeAngle,
         drawCircleOnCanvas
-
 
     } = useCanvasDrawing(
         canvasRef,
@@ -648,28 +648,29 @@ useEffect(() => {
         setStickyNotes(prevNotes => prevNotes.filter(note => note.id !== id));
     }, [setStickyNotes]);
 
+    
+      
+    return (
+        <div className="flex w-screen h-screen overflow-auto">
+            <div className="relative" style={{ width: "6000px", height: "6000px" }}>
+                <div id="three-container" style={{ width: "300px", height: "300px" }}></div>
 
-   return (
-  <div className="flex w-screen h-screen overflow-auto">
-    <div className="relative" style={{ width: "6000px", height: "6000px" }}>
-    <div id="three-container" style={{ width: "300px", height: "300px" }}></div>
-
-      {/* 🔹 Grid Layer (always behind canvas, never disappears) */}
-      <div
-        className="absolute top-0 left-0 w-full h-full"
-        style={{
-            width: "6000px",
-    height: "6000px",
-    backgroundColor: gridColor,
-    backgroundImage: `
+                {/* 🔹 Grid Layer (always behind canvas, never disappears) */}
+                <div
+                    className="absolute top-0 left-0 w-full h-full"
+                    style={{
+                        width: "6000px",
+                        height: "6000px",
+                        backgroundColor: gridColor,
+                        backgroundImage: `
             linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
             linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)
           `,
-          backgroundSize: "50px 50px",
-          zIndex: 0,   // 👈 Grid always behind
-        }}
-      />
-{tool.startsWith("3d-") && (
+                        backgroundSize: "50px 50px",
+                        zIndex: 0,   // 👈 Grid always behind
+                    }}
+                />
+               {tool.startsWith("3d-") && (
   <div
     style={{
       position: "absolute",
@@ -677,34 +678,39 @@ useEffect(() => {
       left: 0,
       width: "100%",
       height: "100%",
-      zIndex: 5, // higher than your 2D canvas
-      pointerEvents: "none", // so it doesn't block mouse drawing
+      zIndex: 2,          // 👈 above 2D canvas
+      pointerEvents: "auto",
     }}
   >
-    <Canvas camera={{ position: [5, 5, 5] }}>
-      <ambientLight intensity={0.5} />
+    {/* <Canvas
+      camera={{ position: [5, 5, 5], fov: 50 }}
+      style={{ background: "transparent" }}
+    >
+      <ambientLight intensity={0.6} />
       <directionalLight position={[10, 10, 5]} />
-      <ThreeDShapes selectedShape={tool} />
+      
+      <use3DShapes selectedShape={tool} />
       <OrbitControls />
-    </Canvas>
+    </Canvas> */}
   </div>
 )}
 
-      <canvas
-        ref={canvasRef}
-        width={6000}
-        height={6000}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          backgroundColor: "transparent",
-          zIndex: 1,   
 
-        }}
+                <canvas
+                    ref={canvasRef}
+                    width={6000}
+                    height={6000}
+                    style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        backgroundColor: "transparent",
+                        zIndex: 1,
+
+                    }}
                     onTouchStart={handleTouchStart}
-  onTouchMove={handleTouchMove}
-  onTouchEnd={handleTouchEnd}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
                     onMouseDown={handleMouseDown}
                     onMouseMove={isDrawing ? drawLine : undefined}
                     onMouseUp={finishDrawing}
@@ -716,8 +722,8 @@ useEffect(() => {
                                 'hexagon', 'cylinder', 'arrow-left', 'arrow-right', 'arrow-both',
                                 'brace-left', 'brace-right', 'cloud', 'plus', 'trapezoid', 'parallelogram',
                                 'octagon', 'speechBubble', 'hamburger'
-                              ].includes(tool)
-                               
+                            ].includes(tool)
+
                         ) {
                             handleCanvasClick(e);  // now new shapes are included
                         }
@@ -725,40 +731,38 @@ useEffect(() => {
 
                     className="cursor-crosshair"
                 />
-setTool("3d-cube"); // cube
-setTool("3d-sphere"); // sphere
-setTool("3d-pyramid"); // pyramid
+              
 
 
-  {shapes.map((shape) => (
-    <Shape
-        key={shape.id}
-        shape={shape}
-        onUpdate={updateShape}
-        onDelete={deleteShape}
-    />
-))}
- {(stickyNotes || []).map(note => (
-                <StickyNote
-                    key={note.id}
-                    note={note}
-                    onUpdateText={handleUpdateStickyNoteText}
-                    onUpdatePosition={handleUpdateStickyNotePosition}
-                    onDelete={handleDeleteStickyNote}
-                    onUpdateSize={handleUpdateStickyNoteSize} // ✅ Add this line
-                />
-            ))}
-
-            {isPanelOpen && (
-                <div className="w-[400px] h-full overflow-y-auto bg-white shadow-lg z-10" style={{ position: 'relative' }}>
-                    <SidePanel
-                        onTextExtracted={handleExtractedText}
-                        ocrText={extractedTextState}
-                        userId={userId}
-                    // userId={isAdminView ? teacherUid : user?.uid}
+                {shapes.map((shape) => (
+                    <Shape
+                        key={shape.id}
+                        shape={shape}
+                        onUpdate={updateShape}
+                        onDelete={deleteShape}
                     />
-                </div>
-            )}
+                ))}
+                {(stickyNotes || []).map(note => (
+                    <StickyNote
+                        key={note.id}
+                        note={note}
+                        onUpdateText={handleUpdateStickyNoteText}
+                        onUpdatePosition={handleUpdateStickyNotePosition}
+                        onDelete={handleDeleteStickyNote}
+                        onUpdateSize={handleUpdateStickyNoteSize} // ✅ Add this line
+                    />
+                ))}
+
+                {isPanelOpen && (
+                    <div className="w-[400px] h-full overflow-y-auto bg-white shadow-lg z-10" style={{ position: 'relative' }}>
+                        <SidePanel
+                            onTextExtracted={handleExtractedText}
+                            ocrText={extractedTextState}
+                            userId={userId}
+                        // userId={isAdminView ? teacherUid : user?.uid}
+                        />
+                    </div>
+                )}
 
 
 
@@ -921,7 +925,6 @@ setTool("3d-pyramid"); // pyramid
                     />
                 )
             }
-      <ThreeDShapes />
 
             <WhiteboardToolbar
                 tool={tool}

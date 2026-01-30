@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase/firebase';
 import AddTeacherForm from './AddTeacherForm';
 import DataTable from 'react-data-table-component';
-import { FaTrash, FaPlus, FaSearch } from 'react-icons/fa'; // Removed FaUserCircle, FaSignOutAlt as they are in Header
+import { FaTrash, FaPlus, FaSearch, FaEdit } from 'react-icons/fa'; // Removed FaUserCircle, FaSignOutAlt as they are in Header
 import AdminWhiteboards from './AdminWhiteboards';
 import axios from 'axios';
 import ProfileModal from './ProfileModal';
@@ -12,13 +12,14 @@ import Header from './Header'; // Import the new Header component
 import { API_BASE } from './apiConfig';
 
 export default function AdminDashboard() {
-  const [showForm, setShowForm] = useState(false);
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const navigate = useNavigate();
+  const [showTeacherModal, setShowTeacherModal] = useState(false);
+  const [editTeacher, setEditTeacher] = useState(null);
 
   const ADMIN_EMAIL = 'admin@eboard.com';
 
@@ -32,10 +33,10 @@ export default function AdminDashboard() {
       setLoading(true);
       const res = await fetch(`${API_BASE}/teachers`);
       const data = await res.json();
-  
+
       // Ensure teachers is always an array
       if (Array.isArray(data)) {
-        setTeachers(data);
+        setTeachers(data);  // <-- use `data` here, not `res.data`
       } else {
         console.error('Unexpected teachers data:', data);
         setTeachers([]);
@@ -47,7 +48,8 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
-  
+
+
 
   useEffect(() => {
     fetchTeachers();
@@ -105,7 +107,7 @@ export default function AdminDashboard() {
       console.error('❌ Error adding teacher:', err.message);
       alert('❌ Error: ' + err.message);
     } finally {
-      setShowForm(false);
+      setShowTeacherModal(false);
     }
   };
 
@@ -122,7 +124,33 @@ export default function AdminDashboard() {
       alert('❌ Error deleting teacher: ' + (err.response?.data?.message || err.message));
     }
   };
-
+  const handleUpdateTeacher = async ({ uid, name, email, password }) => {
+    try {
+      const response = await fetch(`${API_BASE}/teacher/${uid}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to update teacher');
+      }
+  
+      alert('✅ Teacher updated successfully!');
+      fetchTeachers();
+    } catch (err) {
+      console.error('❌ Error updating teacher:', err.message);
+      alert('❌ Error: ' + err.message);
+    } finally {
+      setShowTeacherModal(false);
+      setEditTeacher(null);
+    }
+  };
+  
   const filteredTeachers = teachers.filter((t) =>
     (t.name + t.email).toLowerCase().includes(searchText.toLowerCase())
   );
@@ -143,18 +171,33 @@ export default function AdminDashboard() {
     {
       name: 'Actions',
       cell: row => (
-        <button
-          onClick={() => handleDeleteTeacher(row.uid)}
-          className="text-red-500 hover:text-red-700 transition-colors"
-          title="Delete Teacher"
-        >
-          <FaTrash className="w-4 h-4" />
-        </button>
+        <div className="flex gap-3">
+          {/* EDIT */}
+          <button
+            onClick={() => {
+              setEditTeacher(row);
+              setShowTeacherModal(true);
+            }}
+            className="text-blue-600 hover:text-blue-800"
+            title="Edit Teacher"
+          >
+            <FaEdit />
+          </button>
+
+          {/* DELETE */}
+          <button
+            onClick={() => handleDeleteTeacher(row.uid)}
+            className="text-red-500 hover:text-red-700"
+            title="Delete Teacher"
+          >
+            <FaTrash />
+          </button>
+        </div>
       ),
       ignoreRowClick: true,
       allowOverflow: true,
       button: true,
-    }
+    },
   ];
 
   return (
@@ -168,7 +211,7 @@ export default function AdminDashboard() {
 
       {/* Main Content Area */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
+
         {/* Teacher Management Card */}
         <div className="bg-white rounded-2xl shadow-xl p-6 border border-slate-200">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Manage Teachers</h2>
@@ -184,14 +227,17 @@ export default function AdminDashboard() {
               />
             </div>
             <button
-              onClick={() => setShowForm(true)}
-              className="px-6 py-2 bg-slate-800 hover:bg-indigo-700 text-white font-semibold rounded-full shadow-md transition-all flex items-center space-x-2 w-full sm:w-auto"
+              onClick={() => {
+                setEditTeacher(null);   // add mode
+                setShowTeacherModal(true);
+              }}
+              className="px-6 py-2 bg-slate-800 hover:bg-indigo-700 text-white rounded-full flex items-center gap-2"
             >
               <FaPlus />
               <span>Add Teacher</span>
             </button>
           </div>
-          
+
           {/* Teachers DataTable */}
           <DataTable
             columns={columns}
@@ -232,10 +278,15 @@ export default function AdminDashboard() {
 
       </div>
 
-      {showForm && (
+      {showTeacherModal && (
         <AddTeacherForm
-          onClose={() => setShowForm(false)}
+          initialData={editTeacher}   // null = add | object = edit
+          onClose={() => {
+            setShowTeacherModal(false);
+            setEditTeacher(null);
+          }}
           onAdd={handleAddTeacher}
+          onUpdate={handleUpdateTeacher}
         />
       )}
 
@@ -244,6 +295,7 @@ export default function AdminDashboard() {
         onClose={() => setShowProfileModal(false)}
         user={userProfile}
       />
+
     </div>
   );
 }

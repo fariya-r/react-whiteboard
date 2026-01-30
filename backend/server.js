@@ -1,5 +1,4 @@
 const express = require('express');
-const cors = require('cors');
 const multer = require('multer');
 const admin = require('firebase-admin');
 const path = require('path');
@@ -30,14 +29,35 @@ const createTeacherRoute = require('./routes/createTeacher');
 const teacherRoutes = require('./routes/getTeachers');
 const deleteTeacherRoute = require('./routes/deleteTeacher');
 const fileRoutes = require('./routes/fileRoutes');
-
 const app = express();
+
+const cors = require('cors');
+
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://react-whiteboard-s46b.onrender.com',
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+
+// IMPORTANT
+app.options('*', cors());
+
+
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: allowedOrigins,
+    methods: ["GET", "POST"]
   }
 });
+
 const whiteboardStates = {};
 
 
@@ -107,12 +127,6 @@ if (!fs.existsSync(recordingsDir)) {
   fs.mkdirSync(recordingsDir);
 }
 
-// ✅ Middlewares
-app.use(cors({
-  origin: '*', 
-  methods: ['GET', 'POST', 'DELETE'],
-  credentials: true
-}));
 const handwritingRoutes = require('./routes/handwriting');
 app.use('/api/handwriting', handwritingRoutes);
 
@@ -132,6 +146,8 @@ app.use(require('./routes/delete'));
 app.use('/api/create-teacher', createTeacherRoute);
 app.use('/api', teacherRoutes);
 app.use('/api/teacher', deleteTeacherRoute);
+const updateTeacherRoute = require('./routes/updateTeacher');
+app.use('/api', updateTeacherRoute);
 
 
 app.post('/api/upload-recording', upload.single('file'), (req, res) => {
@@ -178,4 +194,5 @@ const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 server.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT} (port ${PORT})`);
 });
+
 

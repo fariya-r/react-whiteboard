@@ -85,35 +85,42 @@ const handleRedo = useCallback(() => {
       
 
       const handleReset = useCallback(() => {
-        if (contextRef.current && canvasRef.current) {
-          // 🎨 Redraw background + grids
+        const canvas = canvasRef.current;
+        const ctx = contextRef.current;
+        if (!canvas || !ctx) return;
       
-          // ✅ snapshot save karo, null na bhejo
-          const snapshot = canvasRef.current.toDataURL();
-          setBackgroundSnapshot(snapshot);
+        // ✅ 1. Physically clear canvas
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // reset scale/transform
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-          // Reset states
-          setHistory([]);
-          setRedoStack([]);
-          setScale(1);
-          setTool("pen");
-          setShowRuler(false);
-          setActiveTextBox(null);
-          setTextBoxes([]);
-          setPivotPoint(null);
-          setCurrentPoint(null);
-          setIsDrawingCircle(false);
-          setIsDraggingCompass(false);
-          setShapes([]);
-          if (typeof setCompassAngle === "function") {
-            setCompassAngle(0);
-          }
-          setCompassPosition({ x: 100, y: 100 });
-          setTextEntries([]);
+        // ✅ 2. Completely remove snapshots
+        setBackgroundSnapshot(null);
+        setHistory([]);
+        setRedoStack([]);
+      
+        // ✅ 3. Reset tools & states
+        setScale(1);
+        setTool("pen");
+        setShowRuler(false);
+        setActiveTextBox(null);
+        setTextBoxes([]);
+        setPivotPoint(null);
+        setCurrentPoint(null);
+        setIsDrawingCircle(false);
+        setIsDraggingCompass(false);
+        setShapes([]);
+        setTextEntries([]);
+      
+        // Compass reset
+        if (typeof setCompassAngle === "function") {
+          setCompassAngle(0);
         }
+        setCompassPosition({ x: 100, y: 100 });
+      
       }, [
         canvasRef,
         contextRef,
+        setBackgroundSnapshot,
         setHistory,
         setRedoStack,
         setScale,
@@ -121,16 +128,16 @@ const handleRedo = useCallback(() => {
         setShowRuler,
         setActiveTextBox,
         setTextBoxes,
-        setShapes,
         setPivotPoint,
         setCurrentPoint,
         setIsDrawingCircle,
         setIsDraggingCompass,
         setCompassAngle,
         setCompassPosition,
-        setTextEntries,
-        setBackgroundSnapshot
+        setShapes,
+        setTextEntries
       ]);
+      
       
     return {
         handleUndo,
