@@ -32,7 +32,8 @@ const WhiteboardToolbar = ({
   handleUndo, handleRedo, togglePanel, handleZoom, handleNewWhiteboard, sessionId,
   setShowRuler, handleSave, fetchSavedBoards, canvasRef, setActiveTextBox, handleReset,
   // Add new props for background color
-  backgroundColor, setBackgroundColor
+  backgroundColor, setBackgroundColor,
+  gridStyle, setGridStyle
 }) => {
   const [isShapesMenuOpen, setIsShapesMenuOpen] = useState(false);
 
@@ -115,6 +116,17 @@ const WhiteboardToolbar = ({
           className="w-8 h-8 cursor-pointer"
         />
       </label>
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-semibold">Grid</span>
+        {['lines', 'dots', 'empty'].map(style => (
+          <button
+            key={style}
+            onClick={() => setGridStyle(style)}
+            className={`px-2 py-1 rounded-lg text-xs ${gridStyle === style ? 'bg-blue-200 text-blue-800' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+            {style}
+          </button>
+        ))}
+      </div>
       <button onClick={handleReset} className="bg-red-500 text-white px-3 py-1 rounded">Reset</button>
     </div>
   );

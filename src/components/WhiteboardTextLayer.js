@@ -30,8 +30,8 @@ const WhiteboardTextLayer = ({
           if (index === draggingIndex) {
             return {
               ...box,
-              x: clientX - dragOffset.x, // ✅ Now dragOffset is correctly used
-              y: clientY - dragOffset.y // ✅ Now dragOffset is correctly used
+              x: clientX - dragOffset.x,
+              y: clientY - dragOffset.y
             };
           }
           return box;
@@ -54,97 +54,16 @@ const WhiteboardTextLayer = ({
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
-    
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggingIndex, dragOffset, setTextBoxes, socket, sessionId, setDraggingIndex]); // ✅ dragOffset is now in the dependency array
-  
+  }, [draggingIndex, dragOffset, setTextBoxes, socket, sessionId, setDraggingIndex]);
+
   return (
     <>
-      {/* 1. Toolbar for current active textbox */}
-      {activeTextBox && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white p-2 rounded shadow flex items-center space-x-2 z-50">
-          {/* Font dropdown */}
-          <select
-            value={activeTextBox.font}
-            onChange={(e) => setActiveTextBox({ ...activeTextBox, font: e.target.value })}
-            className="p-1 border rounded"
-          >
-            <option value="Arial">Arial</option>
-            <option value="Courier New">Courier New</option>
-            <option value="Georgia">Georgia</option>
-            <option value="Times New Roman">Times New Roman</option>
-          </select>
-          {/* Bold button */}
-          <button
-            className={`px-2 py-1 border rounded ${activeTextBox.bold ? 'bg-gray-300' : ''}`}
-            onClick={() =>
-              setActiveTextBox((prev) => ({ ...prev, bold: !prev.bold }))
-            }
-          >
-            <FaBold />
-          </button>
-          {/* Italic button */}
-          <button
-            className={`px-2 py-1 border rounded ${activeTextBox.italic ? 'bg-gray-300' : ''}`}
-            onClick={() =>
-              setActiveTextBox((prev) => ({ ...prev, italic: !prev.italic }))
-            }
-          >
-            <FaItalic />
-          </button>
-          {/* Underline button */}
-          <button
-            className={`px-2 py-1 border rounded ${activeTextBox.underline ? 'bg-gray-300' : ''}`}
-            onClick={() =>
-              setActiveTextBox((prev) => ({ ...prev, underline: !prev.underline }))
-            }
-          >
-            <FaUnderline />
-          </button>
-          {/* Font size dropdown */}
-          <select
-            value={activeTextBox.size}
-            onChange={(e) => setActiveTextBox({ ...activeTextBox, size: parseInt(e.target.value) })}
-            className="p-1 border rounded"
-          >
-            <option value="14">14</option>
-            <option value="18">18</option>
-            <option value="24">24</option>
-            <option value="32">32</option>
-          </select>
-          {/* Color input */}
-          <input
-            type="color"
-            value={activeTextBox.color}
-            onChange={(e) => setActiveTextBox({ ...activeTextBox, color: e.target.value })}
-            className="w-8 h-8 rounded"
-          />
-          {/* Done button */}
-          <button
-            onClick={() => {
-              if (activeTextBox && activeTextBox.text.trim() !== '') {
-                const newTextBox = { ...activeTextBox };
-                setTextBoxes(prev => [...prev, newTextBox]);
-                if (socket) {
-                  socket.emit('text-box-created', {
-                    room: sessionId,
-                    textBox: newTextBox,
-                  });
-                }
-              }
-              setActiveTextBox(null);
-            }}
-            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors"
-          >
-            Done
-          </button>
-        </div>
-      )}
-
-      {/* 2. Editable light-blue textarea while typing */}
+      {/* Editable light-blue textarea while typing (world-coordinates — moves with pan/zoom) */}
       {activeTextBox && (
         <textarea
           autoFocus
@@ -163,6 +82,7 @@ const WhiteboardTextLayer = ({
             border: '1px dashed #6b7280',
             outline: 'none',
             resize: 'none',
+            pointerEvents: 'auto',
             zIndex: 80,
             borderRadius: '8px',
             padding: '4px 8px',
@@ -177,7 +97,7 @@ const WhiteboardTextLayer = ({
         />
       )}
 
-      {/* 3. Finalized text boxes (rendered as static divs) */}
+      {/* Finalized text boxes (world-coordinates — moves with pan/zoom) */}
       {textBoxes.map((box, index) => (
         <div
           key={index}
@@ -188,6 +108,7 @@ const WhiteboardTextLayer = ({
             top: box.y,
             left: box.x,
             cursor: draggingIndex === index ? 'grabbing' : 'grab',
+            pointerEvents: 'auto',
           }}
           onMouseDown={(e) => {
             setDraggingIndex(index);
@@ -214,6 +135,7 @@ const WhiteboardTextLayer = ({
               outline: 'none',
               resize: 'none',
               zIndex: 80,
+              pointerEvents: 'auto',
               borderRadius: '8px',
               padding: '6px 10px',
               width: 'fit-content',
@@ -237,6 +159,77 @@ const WhiteboardTextLayer = ({
         </div>
       ))}
     </>
+  );
+};
+
+// Screen-fixed toolbar (font/bold/italic/color/Done) — world-container ke
+// TRANSFORM se BAHAR render karo (WhiteboardActivity mein), warna pan/zoom
+// ke sath yeh screen se bahar chala jata hai.
+export const WhiteboardTextToolbar = ({ activeTextBox, setActiveTextBox, setTextBoxes, sessionId, socket }) => {
+  if (!activeTextBox) return null;
+
+  return (
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-white p-2 rounded shadow flex items-center space-x-2 z-50 pointer-events-auto">
+      <select
+        value={activeTextBox.font}
+        onChange={(e) => setActiveTextBox({ ...activeTextBox, font: e.target.value })}
+        className="p-1 border rounded"
+      >
+        <option value="Arial">Arial</option>
+        <option value="Courier New">Courier New</option>
+        <option value="Georgia">Georgia</option>
+        <option value="Times New Roman">Times New Roman</option>
+      </select>
+      <button
+        className={`px-2 py-1 border rounded ${activeTextBox.bold ? 'bg-gray-300' : ''}`}
+        onClick={() => setActiveTextBox((prev) => ({ ...prev, bold: !prev.bold }))}
+      >
+        <FaBold />
+      </button>
+      <button
+        className={`px-2 py-1 border rounded ${activeTextBox.italic ? 'bg-gray-300' : ''}`}
+        onClick={() => setActiveTextBox((prev) => ({ ...prev, italic: !prev.italic }))}
+      >
+        <FaItalic />
+      </button>
+      <button
+        className={`px-2 py-1 border rounded ${activeTextBox.underline ? 'bg-gray-300' : ''}`}
+        onClick={() => setActiveTextBox((prev) => ({ ...prev, underline: !prev.underline }))}
+      >
+        <FaUnderline />
+      </button>
+      <select
+        value={activeTextBox.size}
+        onChange={(e) => setActiveTextBox({ ...activeTextBox, size: parseInt(e.target.value) })}
+        className="p-1 border rounded"
+      >
+        <option value="14">14</option>
+        <option value="18">18</option>
+        <option value="24">24</option>
+        <option value="32">32</option>
+      </select>
+      <input
+        type="color"
+        value={activeTextBox.color}
+        onChange={(e) => setActiveTextBox({ ...activeTextBox, color: e.target.value })}
+        className="w-8 h-8 rounded"
+      />
+      <button
+        onClick={() => {
+          if (activeTextBox && activeTextBox.text.trim() !== '') {
+            const newTextBox = { ...activeTextBox };
+            setTextBoxes(prev => [...prev, newTextBox]);
+            if (socket) {
+              socket.emit('text-box-created', { room: sessionId, textBox: newTextBox });
+            }
+          }
+          setActiveTextBox(null);
+        }}
+        className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors"
+      >
+        Done
+      </button>
+    </div>
   );
 };
 

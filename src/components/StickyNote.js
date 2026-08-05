@@ -138,6 +138,7 @@ const StickyNote = React.memo(({ note, onUpdateText, onUpdatePosition, onUpdateS
         boxSizing: 'border-box',
         userSelect: isEditing ? 'text' : 'none',
         overflow: 'hidden',
+        pointerEvents: 'auto',
       }}
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}

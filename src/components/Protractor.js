@@ -2,6 +2,8 @@ import React, { useCallback, useState } from "react";
 
 // Assuming Tailwind CSS is available. The styling uses Tailwind classes.
 const Protractor = ({
+  position: initialPosition, // ✅ parent se world-coordinate position
+  onPositionChange,          // ✅ jab bhi protractor drag ho, parent ko batao
   radius = 250,
   handlePos,
   setHandlePos,
@@ -14,7 +16,7 @@ const Protractor = ({
   const [isHalfMode, setIsHalfMode] = useState(true);
 
   // State for dragging the whole protractor
-  const [position, setPosition] = useState({ x: 100, y: 100 });
+  const [position, setPosition] = useState(initialPosition || { x: 100, y: 100 });
   const [isDraggingTool, setIsDraggingTool] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
@@ -127,10 +129,12 @@ const Protractor = ({
     const clientX = isTouch ? e.touches[0].clientX : e.clientX;
     const clientY = isTouch ? e.touches[0].clientY : e.clientY;
 
-    setPosition({
+    const newPos = {
       x: clientX - dragOffset.x,
       y: clientY - dragOffset.y,
-    });
+    };
+    setPosition(newPos);
+    if (onPositionChange) onPositionChange(newPos); // ✅ parent ko bhi turant batao
   };
 
   // ======================
@@ -448,6 +452,7 @@ const Protractor = ({
         cursor: isDraggingTool || isDraggingSecondLayer || isDraggingThirdLayer ? "grabbing" : "move",
         touchAction: "none",
         userSelect: "none",
+        pointerEvents: "auto",
         filter: "drop-shadow(2px 4px 6px rgba(0,0,0,0.1))",
         transform: `rotate(${rotation}deg) scale(${scale})`,
         transition: 'transform 0.3s ease-in-out' // Smooth transition for scaling

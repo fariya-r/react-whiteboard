@@ -2,6 +2,7 @@
   "name": "eboard-app",
   "version": "0.1.0",
   "private": true,
+  "proxy": "http://localhost:5000",
   "dependencies": {
     "@google-cloud/vision": "^5.3.2",
     "@react-three/drei": "^10.7.7",

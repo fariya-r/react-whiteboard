@@ -127,12 +127,12 @@ if (!fs.existsSync(recordingsDir)) {
   fs.mkdirSync(recordingsDir);
 }
 
+app.use(express.json({ limit: '50mb' }));
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
 const handwritingRoutes = require('./routes/handwriting');
 app.use('/api/handwriting', handwritingRoutes);
-
-app.use(express.json());
-app.use(bodyParser.json({ limit: '20mb' }));
-app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api', fileRoutes);
 
 app.use('/api', extractedTextRoutes); // The base path must match your frontend

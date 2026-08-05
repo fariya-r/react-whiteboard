@@ -290,9 +290,15 @@ const TopToolbar = ({
           transition={{ delay: 0.1 }}
         >
           {/* Shapes with adjusted size and colors */}
-          <button onClick={() => setTool("cube")}>3D Cube</button>
-<button onClick={() => setTool("sphere")}>3D Sphere</button>
-<button onClick={() => setTool("pyramid")}>3D Pyramid</button>
+          {/* <button onClick={() => setTool('3d-cube')}>
+  Cube
+</button>
+<button onClick={() => setTool('3D_SPHERE')}>
+  Sphere
+</button>
+
+<button onClick={() => setTool("3d-pyramid")}>3D Pyramid</button> */}
+
 
           <button
             onClick={() => handleShapeClick("rectangle")}

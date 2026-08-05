@@ -1,15 +1,20 @@
 import React, { useState, useRef, useEffect } from "react";
 
 const Compass = ({
+  position: initialPosition,
   size = 280,
   legLength = 140,
   legWidth = 10,
   initialSpreadDeg = 28,
   initialRotation = -15,
   onDrawCircle,
+  onDrawComplete,
 }) => {
-  // Use state to manage the interactive properties of the compass
-  const [position, setPosition] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+
+ const [position, setPosition] = useState(
+    initialPosition || { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+  );
+  const lastArcRef = useRef(null); // ✅ akhri draw ki details yahan yaad rakhte hain
   const [spreadDeg, setSpreadDeg] = useState(initialSpreadDeg);
   const [rotation, setRotation] = useState(initialRotation);
   const [interactionMode, setInteractionMode] = useState(null); // null, 'drag', 'spread', or 'rotate'
@@ -106,15 +111,23 @@ const Compass = ({
       const radius = 2 * legLength * Math.sin((spreadDeg * Math.PI) / 360);
       
       // Check if drawing has started
+      // Check if drawing has started
       if (onDrawCircle && drawingStartAngle !== null) {
         // We'll pass the start angle and the current angle to draw the arc
         onDrawCircle(position.x, position.y, radius, drawingStartAngle, newAngle);
+        // ✅ Har move pe latest arc details yaad rakho, taake mouse-up pe commit ho sake
+        lastArcRef.current = { x: position.x, y: position.y, radius, startAngle: drawingStartAngle, endAngle: newAngle };
       }
     }
   };
 
   // Handles the end of any interaction
   const handleEnd = () => {
+    // ✅ Agar abhi tak koi arc draw hua tha (rotate mode), usay permanently commit karo
+    if (interactionMode === 'rotate' && lastArcRef.current && onDrawComplete) {
+      onDrawComplete(lastArcRef.current);
+      lastArcRef.current = null;
+    }
     setInteractionMode(null);
     setDrawingStartAngle(null); // Reset the start angle when drawing stops
 };
@@ -189,7 +202,8 @@ const Compass = ({
           left: `${position.x - svgCenter}px`,
           top: `${position.y - svgCenter}px`,
           cursor: interactionMode ? "grabbing" : "grab",
-          zIndex: 1000, // Add this line
+          zIndex: 1000,
+          pointerEvents: "auto",
         }}
         
         onMouseMove={handleMove}

@@ -260,7 +260,7 @@ const handleDelete = async (filePath) => {
     borderBottomRightRadius: '16px',
     overflowY: 'auto',   // ✅ enables full panel scroll
     overflowX: 'hidden',
-    zIndex: 1000,
+    zIndex: 30, // ✅ TopToolbar/WhiteboardToolbar (z-50) ke peeche rehne ke liye
   }}
 >
 
@@ -493,7 +493,7 @@ const handleDelete = async (filePath) => {
             position: 'fixed',
             top: '100px',
             left: '350px',
-            zIndex: 999,
+            zIndex: 30,
             width: '400px',
             height: '240px',
             backgroundColor: '#f9f9f9',

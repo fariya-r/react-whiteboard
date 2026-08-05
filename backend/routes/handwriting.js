@@ -26,7 +26,9 @@ router.post('/recognize', async (req, res) => {
     );
 
     const data = await response.json();
+    console.log("Google Vision full response:", JSON.stringify(data, null, 2));
     const text = data.responses?.[0]?.fullTextAnnotation?.text || '';
+console.log("Recognized text:", text);
     res.json({ text });
 
   } catch (err) {

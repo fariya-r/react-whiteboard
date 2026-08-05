@@ -65,12 +65,12 @@ const use3DShapes = (
   }, []);
 
   /* ---------- mouse handlers ---------- */
-  const start3DShape = useCallback((e, color) => {
+  const start3DShape = useCallback((e, color, toolType) => {
     const { x, y } = getScaledCoordinates(e);
-
+  
     setActiveShape({
       id: Date.now(),
-      type: "cube",
+      type: toolType, // cube, sphere, pyramid
       x,
       y,
       width: 0,
@@ -79,20 +79,39 @@ const use3DShapes = (
       fill: color,
       stroke: "#333"
     });
-
+  
     setIsDrawing3D(true);
   }, [getScaledCoordinates]);
+  
 
   const update3DShape = useCallback((e) => {
     if (!isDrawing3D || !activeShape) return;
+  
     const { x, y } = getScaledCoordinates(e);
-
+  
     setActiveShape(prev => ({
       ...prev,
       width: x - prev.x,
       height: y - prev.y
     }));
-  }, [isDrawing3D, activeShape, getScaledCoordinates]);
+  
+    const ctx = contextRef.current;
+    const canvas = canvasRef.current;
+    if (!ctx || !canvas) return;
+  
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+    // 🔹 restore background
+    if (canvas.previousSnapshot) {
+      const img = new Image();
+      img.src = canvas.previousSnapshot;
+      img.onload = () => render3DShapes();
+    } else {
+      render3DShapes();
+    }
+  }, [isDrawing3D, activeShape]);
+  
+  
 
   const finish3DShape = useCallback(() => {
     if (!activeShape) return;

@@ -11,20 +11,21 @@ import { db } from "../firebase/firebase";
 import TopToolbar from "./TopToolbar";
 import useWhiteboardSocket from '../hooks/useWhiteboardSocket';
 import useBoardLoader from '../hooks/useBoardLoader';
-import WhiteboardTextLayer from '../components/WhiteboardTextLayer';
+import WhiteboardTextLayer, { WhiteboardTextToolbar } from '../components/WhiteboardTextLayer';
 import WhiteboardToolbar from '../components/WhiteboardToolbar';
 import GraphPlotter from "../components/GraphPlotter";
 import useCanvasDrawing from '../hooks/useCanvasDrawing';
+import use3DShapes from "../hooks/use3DShapes";
 import StickyNote from './StickyNote';
 import useCanvasSnapshot from '../hooks/useCanvasSnapshot';
 import Shape from '../components/Shape';
 import Protractor from "../components/Protractor";
-import ThreeDShapes from "./ThreeDShapes";
 import Compass from './Compass';
 import { supabase } from './supabaseClient';
+import HandwritingRecognizer from "../components/HandwritingRecognizer";
 import { drawGridBackground } from "../utils/drawGridBackground";
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+
+const CANVAS_SIZE = 4000; 
 
 const WhiteboardActivity = () => {
     const canvasRef = useRef(null);
@@ -44,16 +45,11 @@ const WhiteboardActivity = () => {
     const [scale, setScale] = useState(1);
     const [history, setHistory] = useState([]);
     const [redoStack, setRedoStack] = useState([]);
-    // const [backgroundColor, setBackgroundColor] = useState('#ffffff');
     const [showRuler, setShowRuler] = useState(false);
     const [scrollPosition, setScrollPosition] = useState({ x: 0, y: 0 });
     const [rulerPosition, setRulerPosition] = useState({ x: 50, y: 50 });
     const [isDraggingRuler, setIsDraggingRuler] = useState(false);
     const [isLessonWindowMinimized, setIsLessonWindowMinimized] = useState(false);
-    const [canvasWidth, setCanvasWidth] = useState(800);
-    const [canvasHeight, setCanvasHeight] = useState(600);
-    const fullWhiteboardWidth = canvasWidth * scale;
-    const fullWhiteboardHeight = canvasHeight * scale;
     const [shapes, setShapes] = useState([]);
     const [savedBoards, setSavedBoards] = useState([]);
     const [showSavedBoards, setShowSavedBoards] = useState(false);
@@ -71,8 +67,8 @@ const WhiteboardActivity = () => {
     const location = useLocation();
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [textEntries, setTextEntries] = useState([]);
-    const [compassPosition, setCompassPosition] = useState({ x: 100, y: 100 });
-    const [isDraggingCompass, setIsDraggingCompass] = useState(false);
+    const [compassPosition, setCompassPosition] = useState({ x: CANVAS_SIZE / 2, y: CANVAS_SIZE / 2 });
+        const [isDraggingCompass, setIsDraggingCompass] = useState(false);
     const [dragStartOffset, setDragStartOffset] = useState({ x: 0, y: 0 });
     const [compassAngle, setCompassAngle] = useState(0);
     const [isDrawingCircle, setIsDrawingCircle] = useState(false);
@@ -81,191 +77,180 @@ const WhiteboardActivity = () => {
     const [isShapesMenuOpen, setIsShapesMenuOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [whiteboardId, setWhiteboardId] = useState(null);
-    const [circles, setCircles] = useState([]);
     const [protractorAngle, setProtractorAngle] = useState(0);
     const [protractorHandle, setProtractorHandle] = useState({ x: 250, y: 0 });
     const [protractorRadius, setProtractorRadius] = useState(250);
+    // ✅ Protractor ka world-position — screen center ke qareeb default (world-center - radius)
+    const [protractorToolPosition, setProtractorToolPosition] = useState({
+        x: CANVAS_SIZE / 2 - 150,
+        y: CANVAS_SIZE / 2 - 150,
+    });
     const [activeTouches, setActiveTouches] = useState({});
     const [boardLabel, setBoardLabel] = useState(null);
-    const { id } = useParams();   // lesson id from URL
+    const { id } = useParams();
     const [rulerAngle, setRulerAngle] = useState(0);
     const [showGraphTool, setShowGraphTool] = useState(false);
-    const [gridSize, setGridSize] = useState(20); // grid cell size in px
-    const [enableSnap, setEnableSnap] = useState(true); // toggle snapping
-    const [backgroundColor, setBackgroundColor] = useState("#001F54"); // default dark blue
+    const [gridSize, setGridSize] = useState(20);
+    const [gridStyle, setGridStyle] = useState('lines');
+    const [enableSnap, setEnableSnap] = useState(true);
+    const [backgroundColor, setBackgroundColor] = useState("#001F54");
     const [gridColor, setGridColor] = useState("#001F54");
-    const gridCanvasRef = useRef(null);
+    const threeContainerRef = useRef(null);
+    const [isAnyShapeEditing, setIsAnyShapeEditing] = useState(false);
     
-      
+    // Panning States
+const [panOffset, setPanOffset] = useState({
+        x: -(CANVAS_SIZE / 2) + window.innerWidth / 2,
+        y: -(CANVAS_SIZE / 2) + window.innerHeight / 2,
+    });
+        const [isPanning, setIsPanning] = useState(false);
+    const [startPanPos, setStartPanPos] = useState({ x: 0, y: 0 });
+
+    const handleWheelZoom = (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            // Agar Ctrl ke sath scroll karein toh Zoom ho
+            e.preventDefault();
+            const zoomDirection = e.deltaY < 0 ? 1 : -1;
+            const zoomFactor = zoomDirection === 1 ? 1.05 : 0.95;
+
+            setScale((prevScale) => {
+                const newScale = Math.min(Math.max(prevScale * zoomFactor, 0.1), 5);
+                const scaleRatio = newScale / prevScale;
+
+                setPanOffset((prevOffset) => ({
+                    x: e.clientX - (e.clientX - prevOffset.x) * scaleRatio,
+                    y: e.clientY - (e.clientY - prevOffset.y) * scaleRatio,
+                }));
+
+                return newScale;
+            });
+        } else {
+            // Agar normal scroll karein toh Canvas smoothly Pan (Scroll) ho
+            e.preventDefault();
+            setPanOffset((prevOffset) => ({
+                x: prevOffset.x - e.deltaX,
+                y: prevOffset.y - e.deltaY,
+            }));
+        }
+    };
+    useEffect(() => {
+        const container = document.getElementById('whiteboard-root');
+        if (!container) return;
+        const wheelHandler = (e) => handleWheelZoom(e);
+        container.addEventListener('wheel', wheelHandler, { passive: false });
+        return () => container.removeEventListener('wheel', wheelHandler);
+    }, [scale, panOffset]);
+
+    
+    const handlePanStart = (e) => {
+        if (tool === 'hand' || e.button === 1 || e.code === "Space") {
+            setIsPanning(true);
+            setStartPanPos({
+                x: e.clientX - panOffset.x,
+                y: e.clientY - panOffset.y,
+            });
+        }
+    };
+
+    useEffect(() => {
+        const handleGlobalMouseMove = (e) => {
+            if (!isPanning) return;
+            setPanOffset({
+                x: e.clientX - startPanPos.x,
+                y: e.clientY - startPanPos.y,
+            });
+        };
+
+        const handleGlobalMouseUp = () => {
+            if (isPanning) setIsPanning(false);
+        };
+
+        if (isPanning) {
+            window.addEventListener('mousemove', handleGlobalMouseMove);
+            window.addEventListener('mouseup', handleGlobalMouseUp);
+        }
+
+        return () => {
+            window.removeEventListener('mousemove', handleGlobalMouseMove);
+            window.removeEventListener('mouseup', handleGlobalMouseUp);
+        };
+    }, [isPanning, startPanPos]);
 
     const snapToGrid = (x, y) => {
         if (!enableSnap || !gridSize) return { x, y };
         const gx = Math.round(x / gridSize) * gridSize;
         const gy = Math.round(y / gridSize) * gridSize;
         return { x: gx, y: gy };
-    };
+    };    
+
     useEffect(() => {
         setGridColor(backgroundColor);
     }, [backgroundColor]);
 
-
-    useEffect(() => {
-        const canvas = gridCanvasRef.current;
-        if (!canvas) return;
-
-        drawGridBackground(canvas, gridColor, gridSize);
-    }, [gridColor, gridSize]); // ← important: depend on color + size
-
+    
 
     useEffect(() => {
         const fetchLesson = async () => {
-            if (!id) return;  // agar simple session open hai toh skip karo
-
+            if (!id) return;
             try {
                 const docRef = doc(db, "whiteboards", id);
                 const docSnap = await getDoc(docRef);
-
                 if (docSnap.exists()) {
                     const lessonData = { id: docSnap.id, ...docSnap.data() };
-                    setBoard(lessonData);  // ✅ ye board loadBoard() ke through render hoga
+                    setBoard(lessonData);
                 }
             } catch (err) {
                 console.error("Error loading lesson:", err);
             }
         };
-
         fetchLesson();
     }, [id]);
 
-    useEffect(() => {
+   useEffect(() => {
         const load = async () => {
             if (!whiteboardId) return;
             const whiteboards = await getWhiteboards();
             const wb = whiteboards.find(wb => wb.id === whiteboardId);
             if (wb?.shapes) setShapes(wb.shapes);
-            if (wb?.circles) setCircles(wb.circles);
+            if (wb?.circles) canvasDrawing.setCircles(wb.circles);
             setLoading(false);
         };
         load();
     }, [whiteboardId]);
-    useEffect(() => {
-        if (!user) return; // user na ho to skip
 
-        const autoSave = async () => {
-            await handleSave();
-        };
-
-        autoSave();
-    }, [circles]);  // ✅ circles change hote hi save hoga
-    useEffect(() => {
-        if (!user) return;
-        const autoSave = async () => {
-            await handleSave();
-        };
-        autoSave();
-    }, [shapes]);
-
-    const handleTouchStart = (e) => {
-        e.preventDefault();
-        const touches = e.touches;
-        const newTouches = { ...activeTouches };
-
-        for (let i = 0; i < touches.length; i++) {
-            const touch = touches[i];
-            const rect = canvasRef.current.getBoundingClientRect();
-            const x = touch.clientX - rect.left;
-            const y = touch.clientY - rect.top;
-
-            newTouches[touch.identifier] = { x, y };
-        }
-        setActiveTouches(newTouches);
-    };
+   
     const handleEditLabel = () => {
         const newLabel = prompt("Edit lesson tag/label:", boardLabel || "Untagged");
         if (newLabel && newLabel.trim() !== "") {
             setBoardLabel(newLabel);
-
-            // Agar board already save hai → update karo
             if (currentBoardId) {
                 updateWhiteboard(
-                    currentBoardId,
-                    backgroundSnapshot,   // ya last snapshot jo bhi ho
-                    tool || "pencil",
-                    color || "#000000",
-                    lineWidth || 2,
-                    textBoxes || [],
-                    shapes || [],
-                    fileUrls || [],
-                    extractedTextState || '',
-                    stickyNotes || [],
-                    backgroundColor,
-                    circles || [],
-                    newLabel
+                    currentBoardId, backgroundSnapshot, tool || "pencil", color || "#000000",
+                    lineWidth || 2, textBoxes || [], shapes || [], fileUrls || [],
+                    extractedTextState || '', stickyNotes || [], backgroundColor,
+                    canvasDrawing.circles || [], newLabel
                 );
             }
         }
     };
 
-
-    const handleTouchMove = (e) => {
-        e.preventDefault();
-        const touches = e.touches;
-        const newTouches = { ...activeTouches };
-
-        for (let i = 0; i < touches.length; i++) {
-            const touch = touches[i];
-            const rect = canvasRef.current.getBoundingClientRect();
-            const x = touch.clientX - rect.left;
-            const y = touch.clientY - rect.top;
-
-            const prev = newTouches[touch.identifier];
-            if (prev) {
-                // Draw line from previous point to new point
-                const ctx = contextRef.current;
-                ctx.beginPath();
-                ctx.moveTo(prev.x, prev.y);
-                ctx.lineTo(x, y);
-                ctx.stroke();
-            }
-
-            newTouches[touch.identifier] = { x, y };
-        }
-
-        setActiveTouches(newTouches);
-    };
-
-    const handleTouchEnd = (e) => {
-        const newTouches = { ...activeTouches };
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            const touch = e.changedTouches[i];
-            delete newTouches[touch.identifier];
-        }
-        setActiveTouches(newTouches);
-    };
-
-
     const handleShapeClick = (shape) => {
         setTool(shape);
-
-        // Ruler toggle ke liye
         setShowRuler(shape === "rulerLine");
-
-        // Graph plotter toggle ke liye
         if (shape === "graphPlotter") {
-            setShowGraphTool((prev) => !prev); // on/off toggle
+            setShowGraphTool((prev) => !prev);
         } else {
-            setShowGraphTool(false); // koi aur tool select hote hi hide
+            setShowGraphTool(false);
         }
     };
 
-
-
     const handleCanvasClick = (e) => {
-        if (tool === "rulerLine") return; // don't draw shapes when ruler is active
+         if (tool === "rulerLine" || tool === "hand") return;
 
         const rect = canvasRef.current.getBoundingClientRect();
-        let x = e.clientX - rect.left;
-        let y = e.clientY - rect.top;
+        // panOffset subtract karna zaroori hai — canvas ab khud move nahi hota
+        let x = (e.clientX - rect.left - panOffset.x) / scale;
+        let y = (e.clientY - rect.top - panOffset.y) / scale;
 
         const snapped = snapToGrid(x, y);
         x = snapped.x;
@@ -274,7 +259,7 @@ const WhiteboardActivity = () => {
         const newShape = {
             id: uuidv4(),
             type: tool,
-            x: x - 50, // keep same offset logic if you want the shape centered on the click
+            x: x - 50,
             y: y - 50,
             width: 100,
             height: 100,
@@ -284,10 +269,7 @@ const WhiteboardActivity = () => {
         };
 
         setShapes(prev => [...prev, newShape]);
-
     };
-
-
 
     const updateShape = (updatedShape) => {
         setShapes(prev => prev.map(s => s.id === updatedShape.id ? updatedShape : s));
@@ -297,201 +279,148 @@ const WhiteboardActivity = () => {
         setShapes(prev => prev.filter(s => s.id !== id));
     };
 
-
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 const idToken = await firebaseUser.getIdToken();
                 await supabase.auth.signInWithIdToken({ provider: 'firebase', token: idToken });
-
-                setUser(firebaseUser);   // ✅ Add back
+                setUser(firebaseUser);
                 setUserId(firebaseUser.uid);
                 setResolved(true);
             } else {
                 await supabase.auth.signOut();
-                setUser(null);           // ✅ Reset user
+                setUser(null);
                 setUserId(null);
             }
         });
-
         return () => unsubscribe();
     }, [auth]);
 
 
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (canvas) {
-        }
-    }, [backgroundColor]);
+    const canvasDrawing = useCanvasDrawing(
+        canvasRef, contextRef, scale, panOffset, sessionId, socket, backgroundSnapshot,
+        setBackgroundSnapshot, compassPosition, setCompassPosition, isDraggingCompass,
+        setIsDraggingCompass, dragStartOffset, setDragStartOffset, compassAngle,
+        setCompassAngle, shapes, setShapes, isDrawingCircle, setIsDrawingCircle,
+        pivotPoint, setPivotPoint, currentPoint, setCurrentPoint, rulerAngle,
+        setRulerAngle, history, setHistory, redoStack, setRedoStack, null    
+    );
 
     const {
-        tool, setTool,
-        color, setColor,
-        lineWidth, setLineWidth,
-        isDrawing, setIsDrawing,
-        stickyNotes, setStickyNotes,
-        startDrawing, drawLine, finishDrawing, handleMouseDown, getScaledCoordinates, drawShapePreview,
-        handleUpdateStickyNoteSize,
-        protractorPosition,
-        finalizeAngle,
+        tool, setTool, color, setColor, lineWidth, setLineWidth, isDrawing, setIsDrawing,
+        stickyNotes, setStickyNotes, startDrawing, drawLine, finishDrawing, handleMouseDown,
+        getScaledCoordinates, handleUpdateStickyNoteSize, protractorPosition, finalizeAngle,
         drawCircleOnCanvas
+    } = canvasDrawing;
 
-    } = useCanvasDrawing(
-        canvasRef,
-        contextRef,
-        scale,
-        sessionId,
-        socket,
-        backgroundSnapshot, // Pass the state variable here
-        setBackgroundSnapshot,
-        compassPosition,
-        setCompassPosition,
-        isDraggingCompass,
-        setIsDraggingCompass,
-        dragStartOffset,
-        setDragStartOffset,
-        compassAngle,
-        setCompassAngle,
-        shapes,      // pass the array
-        setShapes,
-        isDrawingCircle,
-        setIsDrawingCircle,
-        pivotPoint,
-        setPivotPoint,
-        currentPoint,
-        setCurrentPoint,
-        rulerAngle,
-        history,        // pass these down
-        setHistory,
-        redoStack,
-        setRedoStack
-
-    );
-
-    const {
-        handleUndo,
-        handleRedo,
-        handleZoom,
-        handleReset
-    } = useWhiteboardActions(
-        canvasRef,
-        contextRef,
-        history,
-        setHistory,
-        redoStack,
-        setRedoStack,
-        setScale,
-        setTool,
-        setShowRuler,
-        setActiveTextBox,
-        setTextBoxes,
-        setCircles,
-        setShapes,
-        setPivotPoint,
-        setCurrentPoint,
-        setIsDrawingCircle,
-        setIsDraggingCompass,
-        setCompassAngle,
-        setCompassPosition,
-        setTextEntries,
-        setBackgroundSnapshot
-    );
-
-    const handleScroll = (e) => {
-        setScrollPosition({
-            x: e.target.scrollLeft,
-            y: e.target.scrollTop,
-        });
-    };
-
-
-
+    useEffect(() => {
+        if (tool !== 'text' && activeTextBox) {
+            if (activeTextBox.text && activeTextBox.text.trim() !== '') {
+                setTextBoxes(prev => [...prev, activeTextBox]);
+                if (socket) {
+                    socket.emit('text-box-created', {
+                        room: sessionId,
+                        textBox: activeTextBox,
+                    });
+                }
+            }
+            setActiveTextBox(null);
+        }
+    }, [tool]);
     const { getSnapshotWithElements } = useCanvasSnapshot(
-        canvasRef, contextRef, backgroundSnapshot, circles
+        backgroundColor, gridStyle, gridSize
+    );
+
+    const threeD = use3DShapes(
+        threeContainerRef, canvasDrawing.getScaledCoordinates, getSnapshotWithElements
+    );
+ useEffect(() => {
+        if (!user) return;
+        const autoSave = async () => { await handleSave(); };
+        autoSave();
+    }, [canvasDrawing.circles, canvasDrawing.strokes, canvasDrawing.rulerLines, shapes]);
+
+    useEffect(() => {
+        canvasDrawing.setThreeD?.(threeD);
+    }, [threeD]);
+
+    useEffect(() => {
+        if (!threeD) return;
+        if (!tool || !tool.startsWith("3d-")) return;
+        threeD.render3DShapes();
+    }, [tool]);
+
+    
+    // ✅ Naya, sync approach: jab bhi compass/protractor select ho, position
+    // usi click ke event mein (setTool se pehle/saath) calculate karo — taake
+    // component pehli render se hi sahi jagah pe mount ho, "1 render peeche"
+    // wala stale-position bug na aaye.
+    const selectTool = useCallback((newTool) => {
+        if (newTool === 'compass') {
+            const centerWorldX = (window.innerWidth / 2 - panOffset.x) / scale;
+            const centerWorldY = (window.innerHeight / 2 - panOffset.y) / scale;
+            setCompassPosition({ x: centerWorldX - 50, y: centerWorldY - 50 });
+        }
+        if (newTool === 'protractor') {
+            const centerWorldX = (window.innerWidth / 2 - panOffset.x) / scale;
+            const centerWorldY = (window.innerHeight / 2 - panOffset.y) / scale;
+            setProtractorToolPosition({ x: centerWorldX - protractorRadius - 20, y: centerWorldY - protractorRadius - 20 });
+        }
+        setTool(newTool);
+    }, [panOffset, scale, protractorRadius, setTool]);
+   const {
+        handleUndo, handleRedo, handleZoom, handleReset
+    } = useWhiteboardActions(
+        canvasRef, contextRef,
+        setScale, setTool, setShowRuler, setActiveTextBox, setTextBoxes,
+        setPivotPoint, setCurrentPoint, setIsDrawingCircle,
+        setIsDraggingCompass, setCompassAngle, setCompassPosition, setTextEntries,
+        setShapes,
+        canvasDrawing.strokes, canvasDrawing.setStrokes,
+        canvasDrawing.circles, canvasDrawing.setCircles,
+        canvasDrawing.rulerLines, canvasDrawing.setRulerLines,
+        canvasDrawing.angles, canvasDrawing.setAngles,
+        canvasDrawing.actionLog, canvasDrawing.setActionLog,
+        canvasDrawing.redoActionStack, canvasDrawing.setRedoActionStack,
+        canvasDrawing.renderCanvas
     );
 
     const { isAdminView, teacherUid } = useBoardLoader(
-        board,
-        setBoard,
-        resolved,
-        user,
-        setMediaFiles,
-        auth
+        board, setBoard, resolved, user, setMediaFiles, auth
     );
 
     const handleUpdateStickyNoteText = useCallback((id, newText) => {
-        setStickyNotes(prevNotes =>
-            prevNotes.map(note =>
-                note.id === id ? { ...note, text: newText } : note
-            )
-        );
+        setStickyNotes(prevNotes => prevNotes.map(note => note.id === id ? { ...note, text: newText } : note));
     }, [setStickyNotes]);
+
     const handleUpdateStickyNotePosition = useCallback((id, newPosition) => {
-        setStickyNotes(prevNotes =>
-            prevNotes.map(note =>
-                note.id === id ? { ...note, x: newPosition.x, y: newPosition.y } : note
-            )
-        );
+        setStickyNotes(prevNotes => prevNotes.map(note => note.id === id ? { ...note, x: newPosition.x, y: newPosition.y } : note));
     }, [setStickyNotes]);
+
     useWhiteboardSocket(
-        sessionId,
-        navigate,
-        canvasRef,
-        contextRef,
-        socket,
-        setSocket,
-        setBackgroundSnapshot,
-        setTextBoxes,
-        setCircles,
-        setLines
+        sessionId, navigate, canvasRef, contextRef, socket, setSocket,
+        setBackgroundSnapshot, setTextBoxes, canvasDrawing.setCircles, setLines
     );
 
-    const textBoxesRef = useRef([]);
-    textBoxesRef.current = textBoxes;
-
-    const togglePanel = () => {
-        setIsPanelOpen(prev => !prev);
-    };
-
+    
     useEffect(() => {
         const canvas = canvasRef.current;
-        const handleTouchStart = (e) => {
-            if (e.target === canvas) {
-                e.preventDefault();
-            }
-        };
-        const handleTouchMove = (e) => {
-            if (e.target === canvas) {
-                e.preventDefault();
-            }
-        };
-        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-        return () => {
-            canvas.removeEventListener('touchstart', handleTouchStart);
-            canvas.removeEventListener('touchmove', handleTouchMove);
-        };
-    }, []);
+        if (!canvas) return;
 
-    useEffect(() => {
-        if (canvasRef.current) {
-            contextRef.current = canvasRef.current.getContext('2d');
-            canvasRef.current.width = 6000;    // increased
-            canvasRef.current.height = 6000;
+        const resizeCanvas = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            contextRef.current = canvas.getContext('2d');
             contextRef.current.lineCap = 'round';
             contextRef.current.lineJoin = 'round';
-        }
-    }, []);
+            canvasDrawing.renderCanvas?.();
+        };
 
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        return () => window.removeEventListener('resize', resizeCanvas);
+    }, [canvasDrawing.renderCanvas]);
 
-    useEffect(() => {
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-        }
-    }, [activeTextBox?.text]);
-
-    // ✅ FIXED: yeh hook ab `useCanvasDrawing` se milne wale color aur lineWidth ko use kar raha hai
     useEffect(() => {
         if (contextRef.current) {
             contextRef.current.strokeStyle = color;
@@ -499,127 +428,97 @@ const WhiteboardActivity = () => {
         }
     }, [color, lineWidth, contextRef]);
 
-
     const loadBoard = useCallback((boardToLoad) => {
-        if (!canvasRef.current || !contextRef.current) {
-            console.warn('Canvas or context is not available yet. Skipping board load.');
-            return;
-        }
+    if (!canvasRef.current || !contextRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = contextRef.current;
+
+    // 1. Sabse pehle canvas ko mukammal clear karein taake overlapping/repeat na ho
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 2. Background color set karein
+    const bgCol = boardToLoad.backgroundColor || backgroundColor || "#001F54";
+    ctx.fillStyle = bgCol;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    setBackgroundColor(bgCol);
+
+    // 3. Agar snapshot mojood hai toh usay draw karein
+    if (boardToLoad.snapshot) {
         const img = new Image();
         img.src = boardToLoad.snapshot;
         img.onload = () => {
-            contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            contextRef.current.drawImage(img, 0, 0);
-            setTextBoxes(Array.isArray(boardToLoad.textBoxes) ? boardToLoad.textBoxes : []);
-            setCircles(Array.isArray(boardToLoad.circles) ? boardToLoad.circles : []);
-            setStickyNotes(Array.isArray(boardToLoad.stickyNotes) ? boardToLoad.stickyNotes : []); // ✅ ADDED: Load sticky notes
-            if (boardToLoad.ocrText) {
-                setExtractedTextState(boardToLoad.ocrText);
-            } else {
-                setExtractedTextState("");
-            }
-            if (boardToLoad.backgroundColor) {
-                setBackgroundColor(boardToLoad.backgroundColor);
-            } else {
-                // Default color agar save nahi hua ho
-                setBackgroundColor('#ffffff');
-            }
-            setCurrentBoardId(boardToLoad.id);
-            setSelectedBoardId(boardToLoad.id);
-            setBackgroundSnapshot(boardToLoad.snapshot);
-            setShowSavedBoards(false);
-            setShapes(Array.isArray(boardToLoad.shapes) ? boardToLoad.shapes : []);
+            ctx.drawImage(img, 0, 0);
+            if (threeD) threeD.render3DShapes();
         };
+    }
 
-
-        img.onerror = (e) => {
-            console.error("Error loading board snapshot image in loadBoard:", e);
-            contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            contextRef.current.fillStyle = boardToLoad.backgroundColor || "#ffffff";
-            contextRef.current.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        };
-
-    }, [canvasRef, contextRef, setTextBoxes, setCircles, setExtractedTextState, setCurrentBoardId, setSelectedBoardId, setBackgroundSnapshot, setShowSavedBoards, setStickyNotes, setBackgroundColor]);
-
-
+    // 4. Baaki states update karein
+    setTextBoxes(Array.isArray(boardToLoad.textBoxes) ? boardToLoad.textBoxes : []);
+canvasDrawing.setCircles(Array.isArray(boardToLoad.circles) ? boardToLoad.circles : []);
+    setStickyNotes(Array.isArray(boardToLoad.stickyNotes) ? boardToLoad.stickyNotes : []);
+    setExtractedTextState(boardToLoad.ocrText || "");
+    setCurrentBoardId(boardToLoad.id);
+    setSelectedBoardId(boardToLoad.id);
+    setBackgroundSnapshot(boardToLoad.snapshot);
+    setShowSavedBoards(false);
+    setShapes(Array.isArray(boardToLoad.shapes) ? boardToLoad.shapes : []);
+    setPanOffset({ x: 0, y: 0 });
+    setScale(1);
+}, [canvasRef, contextRef, threeD, backgroundColor, canvasDrawing]);
     useEffect(() => {
-        if (board && resolved && canvasRef.current) {
-            loadBoard(board);
-        }
-    }, [board, resolved, loadBoard, canvasRef]);
+        if (!board || !resolved) return;
+        if (!canvasRef.current) return;
+        loadBoard(board);
+    }, [board?.id, resolved]);
 
     const handleNewWhiteboard = () => {
-        const userConfirmation = window.confirm("Are you sure you want to start a new whiteboard? All unsaved changes will be lost.");
-        if (userConfirmation) {
+        if (window.confirm("Are you sure you want to start a new whiteboard?")) {
             handleReset();
             setCurrentBoardId(null);
             setSelectedBoardId(null);
-            alert('New whiteboard started. Click Save to create it.');
+            setPanOffset({ x: 0, y: 0 });
+            setScale(1);
         }
     };
 
-
-
     const handleSave = async () => {
-
         if (!user) {
-
             alert('Please log in to save');
             return;
         }
-        const canvas = canvasRef.current;
-
-        if (!canvas) return;
-        const dataUrl = await getSnapshotWithElements(shapes, circles);
-
-        const currentBackgroundColor = canvas.style.backgroundColor || "#ffffff";
-
-        const label = boardLabel || "Untitled"; // Use a default label if none is set
+        const dataUrl = await getSnapshotWithElements({
+            strokes: canvasDrawing.strokes || [],
+            circles: canvasDrawing.circles || [],
+            rulerLines: canvasDrawing.rulerLines || [],
+            angles: canvasDrawing.angles || [],
+            shapes: shapes || [],
+            textBoxes: textBoxes || [],
+            stickyNotes: stickyNotes || [],
+        });
+        const currentBackgroundColor = backgroundColor || "#001F54";
+        const label = boardLabel || "Untitled";
+        
         if (currentBoardId) {
             await updateWhiteboard(
-                currentBoardId,
-                dataUrl,
-                tool || "pencil",
-                color || "#000000",
-                lineWidth || 2,
-                textBoxes || [],
-                shapes || [],
-                fileUrls || [],
-                extractedTextState || '',
-                stickyNotes || [],
-                currentBackgroundColor,
-                circles || [],
-                label
-
+                currentBoardId, dataUrl, tool || "pencil", color || "#000000",
+                lineWidth || 2, textBoxes || [], shapes || [], fileUrls || [],
+                extractedTextState || '', stickyNotes || [], currentBackgroundColor,
+                canvasDrawing.circles || [], label
             );
-
         } else {
-
             const newId = await saveWhiteboard(
-                dataUrl,
-                tool || "pencil",
-                color || "#000000",
-                lineWidth || 2,
-                textBoxes || [],
-                shapes || [],
-                fileUrls || [],
-                extractedTextState || '',
-                stickyNotes || [],
-                currentBackgroundColor,
-                circles || [],
-                label
+                dataUrl, tool || "pencil", color || "#000000",
+                lineWidth || 2, textBoxes || [], shapes || [], fileUrls || [],
+                extractedTextState || '', stickyNotes || [], currentBackgroundColor,
+                canvasDrawing.circles || [], label
             );
-
             setCurrentBoardId(newId);
         }
-
     };
+
     const fetchSavedBoards = async () => {
         if (showSavedBoards) {
             setShowSavedBoards(false);
-            return;
-        }
-        if (isAdminView && !teacherUid) {
             return;
         }
         try {
@@ -631,108 +530,138 @@ const WhiteboardActivity = () => {
         }
     };
 
-    const handleExtractedText = (text) => {
-        try {
-            setOcrTextBoxes([...ocrTextBoxes, { text, x: 50, y: 50 }]);
-            setExtractedTextState(text);
-        } catch (err) {
-            console.error("Error processing extracted text in WhiteboardActivity:", err);
-        }
-    };
-
     const handleTextCanvasClick = (e) => {
         const { x, y } = getScaledCoordinates(e);
         setActiveTextBox({ x, y, text: '', font: 'Arial', size: 20, color: '#000000', bold: false, italic: false, underline: false });
     };
+
     const handleDeleteStickyNote = useCallback((id) => {
         setStickyNotes(prevNotes => prevNotes.filter(note => note.id !== id));
     }, [setStickyNotes]);
 
-    
-      
-    return (
-        <div className="flex w-screen h-screen overflow-auto">
-            <div className="relative" style={{ width: "6000px", height: "6000px" }}>
-                <div id="three-container" style={{ width: "300px", height: "300px" }}></div>
+const canvasStyle = {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: `${CANVAS_SIZE}px`,
+        height: `${CANVAS_SIZE}px`,
+    };
 
-                {/* 🔹 Grid Layer (always behind canvas, never disappears) */}
+    // Grid + background color — CSS ke through, canvas pixels ko chhue baghair
+    const getGridBackgroundStyle = () => {
+        const bgCol = backgroundColor || "#001F54";
+        const scaledSize = Math.max(gridSize * scale, 2); // 2px minimum, zero pe pattern crash na ho
+
+        if (gridStyle === 'empty') {
+            return { backgroundColor: bgCol, backgroundImage: "none" };
+        }
+
+        if (gridStyle === 'dots') {
+            return {
+                backgroundColor: bgCol,
+                backgroundImage: "radial-gradient(rgba(255,255,255,0.25) 1.5px, transparent 1.5px)",
+                backgroundSize: `${scaledSize}px ${scaledSize}px`,
+                backgroundPosition: `${panOffset.x}px ${panOffset.y}px`,
+            };
+        }
+
+        // default: 'lines'
+        return {
+            backgroundColor: bgCol,
+            backgroundImage:
+                "linear-gradient(to right, rgba(255,255,255,0.12) 1px, transparent 1px), " +
+                "linear-gradient(to bottom, rgba(255,255,255,0.12) 1px, transparent 1px)",
+            backgroundSize: `${scaledSize}px ${scaledSize}px`,
+            backgroundPosition: `${panOffset.x}px ${panOffset.y}px`,
+        };
+    };
+
+   
+   return (
+        <div 
+            id="whiteboard-root"
+            className={`w-screen h-screen overflow-hidden relative select-none ${tool === 'hand' || isPanning ? 'cursor-grab active:cursor-grabbing' : ''}`}
+            style={{ ...getGridBackgroundStyle(), overscrollBehavior: "none", touchAction: "none" }}
+            onMouseDown={handlePanStart}
+        >
+            {/* World Container - Synchronized pan and zoom for all canvas elements */}
+            <canvas
+                ref={canvasRef}
+                style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100vw",
+                    height: "100vh",
+                    backgroundColor: "transparent",
+                    zIndex: 1,
+                    touchAction: "none",
+                    pointerEvents: tool === 'hand' ? 'none' : 'auto'
+                }}
+                onPointerDown={(e) => {
+                    if (tool && tool.startsWith("3d-")) {
+                        threeD.start3DShape(e, color, tool.replace("3d-", ""));
+                    } else {
+                        handleMouseDown(e);
+                    }
+                }}
+                onPointerMove={(e) => {
+                    if (tool && tool.startsWith("3d-")) {
+                        threeD.update3DShape(e);
+                    } else {
+                        drawLine(e);
+                    }
+                }}
+                onPointerUp={(e) => {
+                    if (tool && tool.startsWith("3d-")) {
+                        threeD.finish3DShape();
+                    } else {
+                        finishDrawing(e);
+                    }
+                }}
+                onClick={(e) => {
+                    if (tool === "text") handleTextCanvasClick(e);
+                    else if (
+                        [
+                            'rectangle', 'circle', 'line', 'arrow', 'triangle', 'diamond', 'star',
+                            'hexagon', 'cylinder', 'arrow-left', 'arrow-right', 'arrow-both',
+                            'brace-left', 'brace-right', 'cloud', 'plus', 'trapezoid', 'parallelogram',
+                            'octagon', 'speechBubble', 'hamburger'
+                        ].includes(tool)
+                    ) {
+                        handleCanvasClick(e);
+                    }
+                }}
+                className={tool === 'hand' ? '' : 'cursor-crosshair'}
+            />
+
+            {/* World Container — sirf DOM overlays (shapes, sticky notes, 3D, protractor, compass)
+                ke liye. Canvas ab isse bahar hai. */}
+            <div 
+                className="absolute top-0 left-0 will-change-transform" 
+                style={{ 
+                    width: `${CANVAS_SIZE}px`, 
+                    height: `${CANVAS_SIZE}px`,
+                    transform: `translate3d(${panOffset.x}px, ${panOffset.y}px, 0px) scale(${scale})`,
+                    transformOrigin: "0 0",
+                    zIndex: 5, // canvas (zIndex:1) se upar — taake shapes/stickynotes hamesha hit-test mein jeetein
+                    pointerEvents: "none", // shapes/stickynotes apne khud ke pointer-events sambhalte hain
+                }}
+            >
                 <div
-                    className="absolute top-0 left-0 w-full h-full"
-                    style={{
-                        width: "6000px",
-                        height: "6000px",
-                        backgroundColor: gridColor,
-                        backgroundImage: `
-            linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)
-          `,
-                        backgroundSize: "50px 50px",
-                        zIndex: 0,   // 👈 Grid always behind
-                    }}
-                />
-               {tool.startsWith("3d-") && (
-  <div
-    style={{
-      position: "absolute",
-      top: 0,
-      left: 0,
-      width: "100%",
-      height: "100%",
-      zIndex: 2,          // 👈 above 2D canvas
-      pointerEvents: "auto",
-    }}
-  >
-    {/* <Canvas
-      camera={{ position: [5, 5, 5], fov: 50 }}
-      style={{ background: "transparent" }}
-    >
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[10, 10, 5]} />
-      
-      <use3DShapes selectedShape={tool} />
-      <OrbitControls />
-    </Canvas> */}
-  </div>
-)}
-
-
-                <canvas
-                    ref={canvasRef}
-                    width={6000}
-                    height={6000}
+                    ref={threeContainerRef}
+                    id="three-container"
                     style={{
                         position: "absolute",
                         top: 0,
                         left: 0,
-                        backgroundColor: "transparent",
-                        zIndex: 1,
-
+                        width: "100%",
+                        height: "100%",
+                        zIndex: 2,
+                        background: "transparent",
+                        pointerEvents: (tool && tool.startsWith("3d-")) ? "auto" : "none"
                     }}
-                    onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={isDrawing ? drawLine : undefined}
-                    onMouseUp={finishDrawing}
-                    onClick={(e) => {
-                        if (tool === "text") handleTextCanvasClick(e);
-                        else if (
-                            [
-                                'rectangle', 'circle', 'line', 'arrow', 'triangle', 'diamond', 'star',
-                                'hexagon', 'cylinder', 'arrow-left', 'arrow-right', 'arrow-both',
-                                'brace-left', 'brace-right', 'cloud', 'plus', 'trapezoid', 'parallelogram',
-                                'octagon', 'speechBubble', 'hamburger'
-                            ].includes(tool)
-
-                        ) {
-                            handleCanvasClick(e);  // now new shapes are included
-                        }
-                    }}
-
-                    className="cursor-crosshair"
                 />
-              
-
 
                 {shapes.map((shape) => (
                     <Shape
@@ -740,8 +669,10 @@ const WhiteboardActivity = () => {
                         shape={shape}
                         onUpdate={updateShape}
                         onDelete={deleteShape}
+                        onEditingChange={(isEditing) => setIsAnyShapeEditing(isEditing)}
                     />
                 ))}
+
                 {(stickyNotes || []).map(note => (
                     <StickyNote
                         key={note.id}
@@ -749,74 +680,57 @@ const WhiteboardActivity = () => {
                         onUpdateText={handleUpdateStickyNoteText}
                         onUpdatePosition={handleUpdateStickyNotePosition}
                         onDelete={handleDeleteStickyNote}
-                        onUpdateSize={handleUpdateStickyNoteSize} // ✅ Add this line
+                        onUpdateSize={handleUpdateStickyNoteSize}
                     />
                 ))}
 
-                {isPanelOpen && (
-                    <div className="w-[400px] h-full overflow-y-auto bg-white shadow-lg z-10" style={{ position: 'relative' }}>
-                        <SidePanel
-                            onTextExtracted={handleExtractedText}
-                            ocrText={extractedTextState}
-                            userId={userId}
-                        // userId={isAdminView ? teacherUid : user?.uid}
-                        />
-                    </div>
-                )}
-
-
-
-
-                {/* ✅ Conditionally render Protractor */}
                 {tool === "protractor" && (
-                    <div
-                        style={{
-                            position: "absolute",
-                            top: "150px",
-                            left: "200px",
-                            zIndex: 50,
-                        }}
-                    >
+                    <div style={{ position: "absolute", top: 0, left: 0, zIndex: 50, pointerEvents: "none" }}>
                         <Protractor
+                            position={protractorToolPosition}
+                            onPositionChange={setProtractorToolPosition}
                             radius={protractorRadius}
                             handlePos={protractorHandle}
                             setHandlePos={setProtractorHandle}
                             angle={protractorAngle}
                             setAngle={setProtractorAngle}
-                            onDrawAngle={finalizeAngle} // aapka whiteboard ka function jo angle draw kare
+                            onDrawAngle={(angleData) => {
+                                // ✅ Ab protractorToolPosition hamesha up-to-date hai (drag ke sath sync),
+                                // is liye har angle apni asal, current jagah par banega — na ke purani fixed jagah
+                                const centerX = protractorToolPosition.x + protractorRadius + 20;
+                                const centerY = protractorToolPosition.y + protractorRadius + 20;
+                                finalizeAngle({
+                                    ...angleData,
+                                    centerX,
+                                    centerY,
+                                    radius: protractorRadius,
+                                });
+                            }}
                         />
                     </div>
                 )}
 
                 {tool === 'compass' && (
                     <Compass
-                        // The position is now a controlled prop, managed by the parent component
                         position={compassPosition}
-
                         onDrawCircle={drawCircleOnCanvas}
+                        onDrawComplete={({ x, y, radius }) => {
+                            // ✅ Compass se draw hua circle ab permanently persistent state mein save hota hai
+                            const newCircle = {
+                                id: `circle-${Date.now()}`,
+                                x, y, r: radius,
+                                color, lineWidth,
+                            };
+                            canvasDrawing.setCircles(prev => [...prev, newCircle]);
+                            canvasDrawing.setActionLog(prev => [...prev, { type: 'circle', id: newCircle.id }]);
+                            canvasDrawing.setRedoActionStack([]);
+                        }}
                     />
                 )}
-
-            </div>
-
-            <TopToolbar
-                tool={tool}
-                setTool={setTool}
-                setShowRuler={setShowRuler}
-                showRuler={showRuler}
-                showGraphTool={showGraphTool}
-                setShowGraphTool={setShowGraphTool}
-            />
-
-            {showGraphTool && (
-                <div className="absolute top-24 left-24 z-50 bg-white shadow-lg rounded-lg p-4">
-                    <GraphPlotter />
-                </div>
-            )}
-            <WhiteboardTextLayer
-                activeTextBox={activeTextBox}
+                <WhiteboardTextLayer
+                activeTextBox={isAnyShapeEditing ? null : activeTextBox}
                 setActiveTextBox={setActiveTextBox}
-                textBoxes={textBoxes}
+                textBoxes={isAnyShapeEditing ? [] : textBoxes}
                 setTextBoxes={setTextBoxes}
                 tool={tool}
                 setTool={setTool}
@@ -829,102 +743,123 @@ const WhiteboardActivity = () => {
                 setDragOffset={setDragOffset}
                 dragOffset={dragOffset}
             />
+            </div>
 
-            {
-                showSavedBoards && (
-                    <div
-                        className="absolute top-0 right-0 w-64 z-40 shadow-lg bg-blue-600 rounded-l-xl text-white flex flex-col transition-all duration-300"
-                        style={{
-                            height: isLessonWindowMinimized ? "48px" : "100%", // 🔹 Panel shrinks when minimized
-                            overflow: "hidden"
-                        }}
-                    >
-                        {/* Header */}
-                        <div className="flex justify-between items-center px-3 py-2 bg-blue-700">
-                            <h3 className="text-lg font-bold">Saved Lessons</h3>
-                            <div className="flex gap-1">
-                                {/* Minimize Button */}
-                                <button
-                                    onClick={() => setIsLessonWindowMinimized(prev => !prev)}
-                                    className="hover:bg-blue-500 px-2 py-1 rounded"
-                                    title={isLessonWindowMinimized ? "Restore" : "Minimize"}
-                                >
-                                    {isLessonWindowMinimized ? "🔼" : "🔽"}
-                                </button>
-                                {/* Close Button */}
-                                <button
-                                    onClick={() => setShowSavedBoards(false)}
-                                    className="hover:bg-red-500 px-2 py-1 rounded"
-                                    title="Close"
-                                >
-                                    ❌
-                                </button>
-                            </div>
-                        </div>
+            {/* Done toolbar — screen-fixed, world-container ke transform se bahar */}
+            <WhiteboardTextToolbar
+                activeTextBox={isAnyShapeEditing ? null : activeTextBox}
+                setActiveTextBox={setActiveTextBox}
+                setTextBoxes={setTextBoxes}
+                sessionId={sessionId}
+                socket={socket}
+            />
 
-                        {/* Scrollable Content */}
-                        <div
-                            className={`transition-all duration-300 overflow-y-auto`}
-                            style={{
-                                maxHeight: isLessonWindowMinimized ? "0px" : "100%",
-                                padding: isLessonWindowMinimized ? "0px" : "16px",
-                                opacity: isLessonWindowMinimized ? 0 : 1,
-                            }}
-                        >
-                            {savedBoards.map((board, index) => (
-                                <div key={index} className="mb-4 bg-white rounded-lg overflow-hidden shadow text-black">
-                                    {/* 👇 Tag/Label */}
-                                    <div
-                                        className="bg-green-500 text-white text-xs px-2 py-1 font-semibold cursor-pointer"
-                                        onDoubleClick={handleEditLabel}
-                                    >
-                                        {board.label || "Untagged"}
-                                    </div>
+            <TopToolbar
+                tool={tool}
+                setTool={selectTool}
+                setShowRuler={setShowRuler}
+                showRuler={showRuler}
+                showGraphTool={showGraphTool}
+                setShowGraphTool={setShowGraphTool}
+            />
 
+            {showGraphTool && (
+                <div className="absolute top-24 left-24 z-50 bg-white shadow-lg rounded-lg p-4">
+                    <GraphPlotter />
+                </div>
+            )}
 
-                                    <img
-                                        src={board.snapshot}
-                                        alt={`Whiteboard ${index + 1}`}
-                                        onClick={() => loadBoard(board)}
-                                        className="w-full h-auto cursor-pointer"
-                                    />
+           {isPanelOpen && (
+    <SidePanel
+        isOpen={isPanelOpen}
+        onClose={() => setIsPanelOpen(false)}
+        userId={userId}
+        onTextExtracted={setExtractedTextState}
+    />
+)}
+            
 
-                                    <div className="flex justify-between items-center px-2 py-1 bg-blue-500 text-white text-xs">
-                                        <span className="truncate">{board.createdAt?.toDate?.().toLocaleString() || 'Unknown'}</span>
-                                        <button
-                                            onClick={async () => {
-                                                const confirmDelete = window.confirm('Delete this whiteboard?');
-                                                if (confirmDelete) {
-                                                    await deleteWhiteboard(board.id);
-                                                    setSavedBoards(prev => prev.filter(b => b.id !== board.id));
-                                                }
-                                            }}
-                                            className="hover:text-red-200"
-                                        >
-                                            🗑️
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-
+            {showSavedBoards && (
+                <div
+                    className="absolute top-0 right-0 w-64 z-40 shadow-lg bg-blue-600 rounded-l-xl text-white flex flex-col transition-all duration-300"
+                    style={{
+                        height: isLessonWindowMinimized ? "48px" : "100%",
+                        overflow: "hidden"
+                    }}
+                >
+                    <div className="flex justify-between items-center px-3 py-2 bg-blue-700">
+                        <h3 className="text-lg font-bold">Saved Lessons</h3>
+                        <div className="flex gap-1">
+                            <button
+                                onClick={() => setIsLessonWindowMinimized(prev => !prev)}
+                                className="hover:bg-blue-500 px-2 py-1 rounded"
+                            >
+                                {isLessonWindowMinimized ? "🔼" : "🔽"}
+                            </button>
+                            <button
+                                onClick={() => setShowSavedBoards(false)}
+                                className="hover:bg-red-500 px-2 py-1 rounded"
+                            >
+                                ❌
+                            </button>
                         </div>
                     </div>
-                )
-            }    {
-                showRuler && (
-                    <RulerTool
-                        showRuler={showRuler}
-                        setShowRuler={setShowRuler}
-                        rulerPosition={rulerPosition}
-                        setRulerPosition={setRulerPosition}
-                        isDraggingRuler={isDraggingRuler}
-                        setIsDraggingRuler={setIsDraggingRuler}
-                        setTool={setTool}
-                        rulerAngle={rulerAngle}          // 👈 add this
-                        setRulerAngle={setRulerAngle}
-                    />
-                )
-            }
+
+                    <div
+                        className="transition-all duration-300 overflow-y-auto"
+                        style={{
+                            maxHeight: isLessonWindowMinimized ? "0px" : "100%",
+                            padding: isLessonWindowMinimized ? "0px" : "16px",
+                            opacity: isLessonWindowMinimized ? 0 : 1,
+                        }}
+                    >
+                        {savedBoards.map((board, index) => (
+                            <div key={index} className="mb-4 bg-white rounded-lg overflow-hidden shadow text-black">
+                                <div
+                                    className="bg-green-500 text-white text-xs px-2 py-1 font-semibold cursor-pointer"
+                                    onDoubleClick={handleEditLabel}
+                                >
+                                    {board.label || "Untagged"}
+                                </div>
+                                <img
+                                    src={board.snapshot}
+                                    alt={`Whiteboard ${index + 1}`}
+                                    onClick={() => loadBoard(board)}
+                                    className="w-full h-auto cursor-pointer"
+                                />
+                                <div className="flex justify-between items-center px-2 py-1 bg-blue-500 text-white text-xs">
+                                    <span className="truncate">{board.createdAt?.toDate?.().toLocaleString() || 'Unknown'}</span>
+                                    <button
+                                        onClick={async () => {
+                                            if (window.confirm('Delete this whiteboard?')) {
+                                                await deleteWhiteboard(board.id);
+                                                setSavedBoards(prev => prev.filter(b => b.id !== board.id));
+                                            }
+                                        }}
+                                        className="hover:text-red-200"
+                                    >
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {showRuler && (
+                <RulerTool
+                    showRuler={showRuler}
+                    setShowRuler={setShowRuler}
+                    rulerPosition={rulerPosition}
+                    setRulerPosition={setRulerPosition}
+                    isDraggingRuler={isDraggingRuler}
+                    setIsDraggingRuler={setIsDraggingRuler}
+                    setTool={setTool}
+                    rulerAngle={rulerAngle}
+                    setRulerAngle={setRulerAngle}
+                />
+            )}
 
             <WhiteboardToolbar
                 tool={tool}
@@ -933,8 +868,8 @@ const WhiteboardActivity = () => {
                 setColor={setColor}
                 lineWidth={lineWidth}
                 setLineWidth={setLineWidth}
-                history={history}
-                redoStack={redoStack}
+                history={canvasDrawing.actionLog}
+                redoStack={canvasDrawing.redoActionStack}
                 handleUndo={handleUndo}
                 handleRedo={handleRedo}
                 togglePanel={() => setIsPanelOpen(prev => !prev)}
@@ -949,11 +884,11 @@ const WhiteboardActivity = () => {
                 handleReset={handleReset}
                 backgroundColor={backgroundColor}
                 setBackgroundColor={setBackgroundColor}
-                handleShapeClick={handleShapeClick} // ✅ Pass this
-                isShapesMenuOpen={isShapesMenuOpen}
-                setIsShapesMenuOpen={setIsShapesMenuOpen}
+                gridStyle={gridStyle}
+                setGridStyle={setGridStyle}
             />
-        </div >
+        </div>
     );
 };
+
 export default WhiteboardActivity;
